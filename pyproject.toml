@@ -1,0 +1,22 @@
+[project]
+name = "counterfoil"
+version = "1.0.0"
+description = "Broker trades reconciliation engine"
+requires-python = ">=3.11"
+dependencies = ["jinja2>=3.1", "markdown>=3.8", "pydantic>=2.12", "pyyaml>=6.0.3"]
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.3"]     # PostgreSQL and live mode; the engine runs on CSV files without it
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120                       # the same in the VS Code extension and on the command line
+
+[tool.uv]
+package = false                         # an application, not a library to publish

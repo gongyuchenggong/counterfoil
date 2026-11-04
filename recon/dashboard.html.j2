@@ -1,0 +1,467 @@
+{% macro mark() %}<svg viewBox="0 0 32 32" aria-hidden="true" class="mark"><path d="M4 7h24a2 2 0 0 1 2 2v4l-5 2.5-5-2.5-5 2.5-5-2.5-5 2.5L2 14V9a2 2 0 0 1 2-2z"/><path opacity=".55" d="M2 17.5 5 19l5-2.5 5 2.5 5-2.5 5 2.5v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/></svg>{% endmacro %}
+{# What each key figure measures. Severity shapes below say how important something is; these never repeat. #}
+{% macro icon(name) %}<svg viewBox="0 0 24 24" aria-hidden="true" class="icon" data-icon="{{ name }}">
+{%- if name == "target" %}<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>
+{%- elif name == "flag" %}<path d="M6 21V4h11l-2 4 2 4H6"/>
+{%- elif name == "clock" %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+{%- elif name == "hourglass" %}<path d="M7 3h10M7 21h10M8 3c0 6 8 5 8 9s-8 3-8 9M16 3c0 6-8 5-8 9s8 3 8 9"/>
+{%- elif name == "ban" %}<circle cx="12" cy="12" r="9"/><path d="m6 6 12 12"/>
+{%- elif name == "sun" %}<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+{%- elif name == "moon" %}<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z"/>{% endif %}</svg>{% endmacro %}
+{# One shape and colour per level of importance, used everywhere on the page. #}
+{% macro shape(level) %}<svg viewBox="0 0 12 12" aria-hidden="true" class="shape shape-{{ level|lower }}">
+{%- if level == "HIGH" %}<path d="M6 .8 11.6 11H.4z"/>
+{%- elif level == "MEDIUM" %}<path d="M6 .5 11.5 6 6 11.5.5 6z"/>
+{%- elif level == "LOW" %}<circle cx="6" cy="6" r="5"/>
+{%- elif level == "MATCHED" %}<path d="M1 6.5 4.6 10 11 2.5" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+{%- else %}<rect x="1.5" y="1.5" width="9" height="9" rx="2"/>{% endif %}</svg>{% endmacro %}
+{# Sentences become bullets on the page; the message text itself stays in diagnostics. #}
+{% macro points(text) %}<ul class="points">{% for point in bullets(text) %}<li>{{ point }}</li>{% endfor %}</ul>{% endmacro %}
+{% macro row(view, level, status, case, headline, record, when, facts) %}
+    <tr class="row" data-view="{{ view }}" data-level="{{ level }}">
+      <td><span class="level">{{ shape(level) }}{{ level }}</span></td>
+      <td class="status">{{ status }}</td>
+      <td class="who"><button class="expand" type="button" aria-expanded="false">{{ case }}</button><span>{{ headline }}</span></td>
+      <td>{{ record.instrument }}</td>
+      <td>{{ record.broker }}</td>
+      <td>{{ record.trader }}</td>
+      <td class="when" data-value="{{ when[:5] }}">{{ when }}</td>
+    </tr>
+    <tr class="more" hidden><td colspan="7"><dl class="detail">
+    {% for name, text in facts if text %}
+      <dt>{{ name }}</dt><dd>{{ points(text) }}</dd>
+    {% endfor %}
+    </dl></td></tr>
+{% endmacro %}
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Counterfoil | Broker trades reconciliation</title>
+<meta name="description" content="Counterfoil reconciles broker trades against confirmations and tells Operations what needs attention.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%230072b2' d='M4 7h24a2 2 0 0 1 2 2v4l-5 2.5-5-2.5-5 2.5-5-2.5-5 2.5L2 14V9a2 2 0 0 1 2-2z'/%3E%3Cpath fill='%2356b4e9' d='M2 17.5 5 19l5-2.5 5 2.5 5-2.5 5 2.5v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z'/%3E%3C/svg%3E">
+<script>
+  // The saved choice wins; otherwise the system setting decides. Runs before paint, so the page never flashes.
+  var savedTheme = null;
+  try { savedTheme = localStorage.getItem('theme'); } catch (e) {}
+  document.documentElement.dataset.theme = savedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+</script>
+<style>
+:root { color-scheme: light; --bg:#f7f8fa; --card:#ffffff; --text:#1f2933; --soft:#4a5766; --muted:#5e6c7b; --line:#e6e9ee;
+  --accent:#2f7cb0; --accent-text:#28699a; --on-accent:#ffffff; --bar:#5598c8; --hover:#f1f4f8; --dim:.98;
+  --high:#d0602f; --medium:#e0a93a; --low:#2f78b3; --matched:#1fa890; --info:#74808e;
+  --tint-high:#fbe2d6; --tint-medium:#fdf3d8; --tint-low:#ecf5fb; --tile-sat:60%; }
+/* Night changes the surfaces, ink and tints. Status colours are the same in both modes, so they keep their meaning. */
+:root[data-theme="dark"] { color-scheme: dark; --bg:#141922; --card:#1d2430; --text:#eceff4; --soft:#c5ccd6; --muted:#a8b2be; --line:#303949;
+  --accent-text:#519cd2; --hover:#272f3d; --dim:1.12; --tile-sat:50%;
+  --tint-high:#492614; --tint-medium:#382d0c; --tint-low:#112937; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+body:has(dialog[open]) { overflow:hidden; }
+.wrap { max-width:1180px; margin:0 auto; padding:0 16px; }
+button, select { font:inherit; color:inherit; }
+button { cursor:pointer; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+h2 { font-size:16px; margin:0; }
+.sr { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+
+/* header */
+.band { background:var(--card); border-bottom:1px solid var(--line); margin-bottom:16px; }
+.top { display:flex; align-items:center; gap:12px; padding:14px 16px; max-width:1180px; margin:0 auto; flex-wrap:wrap; }
+.title { margin:0; font:inherit; }
+.brand { display:flex; align-items:center; gap:12px; background:none; border:0; padding:4px; margin:-4px; border-radius:8px; text-align:left; }
+.mark { width:36px; height:36px; fill:var(--accent); flex:none; }
+.brand:hover .mark { transform:rotate(-4deg); }
+.name { display:block; font-size:21px; font-weight:680; letter-spacing:-.015em; line-height:1.15; }
+.tag { display:block; font-size:13px; color:var(--muted); }
+.meta { margin-left:auto; font-size:13px; text-align:right; color:var(--muted); }
+.btn { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:7px 12px; font-size:14px; font-weight:550; }
+.btn:hover { border-color:var(--accent); }
+a.btn { color:inherit; text-decoration:none; }
+.theme { display:inline-flex; padding:9px 10px; }
+.theme [data-icon="moon"], :root[data-theme="dark"] .theme [data-icon="sun"] { display:none; }
+:root[data-theme="dark"] .theme [data-icon="moon"] { display:block; }
+
+/* tiles: each has its own hue; the further from the page colour, the more serious */
+.tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(165px, 1fr)); gap:10px; margin-bottom:14px; }
+.tile { position:relative; border-radius:12px; padding:12px 16px; cursor:help; }
+.tile-label { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:560; }
+.tile-value { font-size:30px; font-weight:680; letter-spacing:-.02em; line-height:1.25; font-variant-numeric:tabular-nums; }
+.icon { width:17px; height:17px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.verdict { margin-left:auto; font-size:11.5px; font-weight:650; letter-spacing:.02em; }
+.tile { background:hsl(var(--hue) var(--tile-sat) var(--light)); color:var(--text); }
+.depth-1 { --light:90%; } .depth-2 { --light:86%; } .depth-3 { --light:81%; } .depth-4 { --light:75%; } .depth-5 { --light:68%; }
+:root[data-theme="dark"] .depth-1 { --light:15%; } :root[data-theme="dark"] .depth-2 { --light:19%; } :root[data-theme="dark"] .depth-3 { --light:23%; }
+:root[data-theme="dark"] .depth-4 { --light:27%; } :root[data-theme="dark"] .depth-5 { --light:31%; }
+
+/* importance */
+.shape { width:12px; height:12px; flex:none; }
+.shape-high { fill:var(--high); } .shape-medium { fill:var(--medium); } .shape-low { fill:var(--low); } .shape-info { fill:var(--info); }
+.shape-matched { fill:none; stroke:var(--matched); }
+.level { display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:650; letter-spacing:.02em; white-space:nowrap; }
+
+/* cases table */
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+.queue { margin-bottom:14px; padding:0; }
+.queue-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 16px; border-bottom:1px solid var(--line); }
+.views { display:inline-flex; border:1px solid var(--line); border-radius:9px; overflow:hidden; }
+.view { background:none; border:0; padding:6px 14px; font-size:14px; font-weight:560; }
+.view[aria-pressed="true"] { background:var(--accent); color:var(--on-accent); }
+.count { color:var(--muted); font-size:13px; font-variant-numeric:tabular-nums; }
+.search { margin-left:auto; flex:1 1 180px; max-width:280px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font:inherit; font-size:14px; }
+.clear { font-size:13px; padding:5px 10px; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { color:var(--soft); font-weight:600; font-size:12.5px; }
+.cases { min-width:860px; }
+.cases th { padding:8px; vertical-align:bottom; white-space:nowrap; }
+.cases th:first-child, .cases td:first-child { padding-left:16px; }
+.cases th select { display:block; width:100%; max-width:150px; margin-top:4px; background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:3px 4px; font-size:12.5px; font-weight:400; }
+.row { cursor:pointer; }
+.row:hover { background:var(--hover); }
+/* the same shading for every row of a given importance; depth follows importance as well as hue */
+.row[data-level="HIGH"], .row[data-level="HIGH"] + .more td, .notice[data-level="HIGH"] { background:var(--tint-high); }
+.row[data-level="MEDIUM"], .row[data-level="MEDIUM"] + .more td, .notice[data-level="MEDIUM"] { background:var(--tint-medium); }
+.row[data-level="LOW"], .row[data-level="LOW"] + .more td, .notice[data-level="LOW"] { background:var(--tint-low); }
+.row[data-level]:hover { filter:brightness(var(--dim)); }
+.row .status, .row .who span, .row .when { color:var(--soft); }
+.status { font-size:12.5px; color:var(--soft); }
+.who { min-width:230px; }
+.who span { display:block; color:var(--soft); font-size:13px; overflow-wrap:anywhere; }
+.expand { background:none; border:0; padding:0; font-weight:600; text-align:left; }
+.expand::after { content:" ›"; color:var(--muted); display:inline-block; margin-left:4px; transition:transform .15s; }
+.expand[aria-expanded="true"]::after { transform:rotate(90deg); }
+.when { color:var(--muted); font-size:12.5px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.more td { padding:4px 16px 14px; background:var(--hover); }
+.detail { margin:0; display:grid; grid-template-columns:70px minmax(0,1fr); gap:6px 12px; font-size:14px; }
+.detail dt { color:var(--soft); font-size:13px; }
+.detail dd { margin:0; max-width:90ch; }
+.points { margin:0; padding-left:16px; }
+.sub { margin:2px 0 0; color:var(--muted); font-size:13px; }
+.none { padding:20px 16px; color:var(--muted); margin:0; }
+.scroll { overflow-x:auto; }
+
+/* records to check */
+.case { border-bottom:1px solid var(--line); }
+.case:last-of-type { border-bottom:0; }
+.case summary { display:grid; grid-template-columns:82px 120px minmax(0,1fr) auto 14px; gap:12px; align-items:baseline; padding:11px 16px; cursor:pointer; list-style:none; }
+.case summary::-webkit-details-marker { display:none; }
+.case summary:hover { background:var(--hover); }
+.case summary::after { content:"›"; color:var(--muted); transition:transform .15s; justify-self:end; }
+.case[open] summary::after { transform:rotate(90deg); }
+.case .detail { padding:2px 16px 14px; }
+.case .who b { font-weight:600; }
+
+/* lower row */
+.lower { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,2fr); gap:14px; margin-bottom:14px; align-items:start; }
+.lower h2 { margin-bottom:12px; }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+td.num { white-space:nowrap; }
+tr.total td { font-weight:650; border-bottom:0; }
+
+/* lag chart: plain HTML bars, so labels stay readable at any width */
+.lag { --label:170px; --value:40px; margin-bottom:6px; }
+.lag-row { display:grid; grid-template-columns:var(--label) minmax(0,1fr) var(--value); align-items:center; gap:10px; border-radius:6px; }
+.lag-row:hover .bar { opacity:.85; }
+.lag-name { font-size:13.5px; text-align:right; overflow-wrap:anywhere; }
+.track { position:relative; height:32px; }
+.track::after { content:""; position:absolute; top:0; bottom:0; left:var(--deadline); border-left:1.5px dashed var(--soft); }
+.bar { position:absolute; left:0; top:8px; height:16px; min-width:4px; background:var(--bar); border-radius:0 4px 4px 0; }
+.ring { position:absolute; top:12px; width:8px; height:8px; margin-left:-4px; border-radius:50%; background:var(--card); border:1.5px solid var(--soft); z-index:1; }
+.lag-value { font-size:13px; color:var(--soft); font-variant-numeric:tabular-nums; }
+.axis { position:relative; height:20px; margin:0 calc(var(--value) + 10px) 0 calc(var(--label) + 10px); color:var(--muted); font-size:11.5px; }
+.axis span { position:absolute; transform:translateX(-50%); font-variant-numeric:tabular-nums; }
+.axis-title { position:relative; height:18px; margin:0 calc(var(--value) + 10px) 0 calc(var(--label) + 10px); color:var(--soft); font-size:11.5px; }
+.axis-title span { position:absolute; white-space:nowrap; transform:translateX(-50%); }
+.legend { color:var(--muted); font-size:12.5px; margin:4px 0 0; }
+#tip { position:fixed; pointer-events:none; display:none; max-width:280px; background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font-size:12.5px; box-shadow:0 2px 8px rgba(0,0,0,.2); z-index:5; }
+footer { color:var(--muted); font-size:12.5px; padding:6px 0 28px; }
+
+/* documentation panel */
+dialog.panel { padding:0; border:0; margin:0 0 0 auto; width:min(780px, 100vw); max-width:100vw; height:100dvh; max-height:100dvh; background:var(--card); color:var(--text); box-shadow:-8px 0 30px rgba(0,0,0,.2); }
+dialog.panel::backdrop { background:rgba(0,0,0,.4); }
+dialog.panel:focus-visible { outline:none; }
+.docs-panel { height:100%; display:flex; flex-direction:column; }
+.docs-head { display:flex; align-items:center; gap:10px; padding:12px 20px; border-bottom:1px solid var(--line); }
+.docs-head .mark { width:26px; height:26px; }
+.docs-head b { font-size:16px; margin-right:auto; }
+.docs-body { overflow-y:auto; padding:6px 20px 32px; flex:1; }
+.toc ul { list-style:none; margin:12px 0 0; padding:0; display:flex; flex-wrap:wrap; gap:6px; }
+.toc a { display:block; border:1px solid var(--line); border-radius:999px; padding:2px 10px; font-size:12.5px; color:var(--soft); text-decoration:none; }
+.toc a:hover { border-color:var(--accent); color:var(--text); }
+.prose { font-size:14.5px; }
+.prose h1 { font-size:22px; margin:20px 0 8px; letter-spacing:-.015em; }
+.prose h2 { font-size:17px; margin:26px 0 8px; scroll-margin-top:10px; }
+.prose a { color:var(--accent-text); }
+.prose .scroll { margin:10px 0; }
+.prose table { font-size:13.5px; }
+.prose pre { background:var(--bg); border-radius:8px; padding:10px 12px; overflow-x:auto; font-size:12px; line-height:1.4; }
+.prose .diagram { background:var(--bg); border-radius:8px; padding:10px 12px; text-align:center; }
+.prose .diagram svg { min-width:480px; }
+.prose code { font:12.5px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.prose td code { white-space:nowrap; }
+
+@media (max-width: 760px) {
+  .lower { grid-template-columns:minmax(0,1fr); }
+  .meta { margin-left:0; text-align:left; flex-basis:100%; order:3; }
+  .search { margin-left:0; max-width:none; flex-basis:100%; }
+  .case summary { grid-template-columns:auto minmax(0,1fr) 14px; }
+  .case .who { grid-column:1 / -1; grid-row:2; }
+  .case .when { display:none; }
+  .lag { --label:0px; }
+  .lag-row { grid-template-columns:minmax(0,1fr) var(--value); }
+  .lag-name { grid-column:1 / -1; text-align:left; padding-top:6px; }
+  .axis, .axis-title { margin-left:0; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; } .brand:hover .mark { transform:none; } }
+</style></head>
+<body>
+<div class="band"><header class="top">
+  <h1 class="title"><button class="brand" type="button" data-open="docs" title="How Counterfoil works">{{ mark() }}
+    <span><span class="name">Counterfoil</span><span class="tag">Broker trades reconciliation</span></span></button></h1>
+  <div class="meta">As of {{ as_of }} (engine clock)<br>{{ rule_version }}</div>
+  <button class="btn theme" type="button" id="theme" aria-label="Night mode" aria-pressed="false">{{ icon("sun") }}{{ icon("moon") }}</button>
+  <button class="btn" type="button" data-open="docs">How it works</button>
+  <button class="btn" type="button" data-open="howto">How to run</button>
+  <a class="btn" href="{{ report_href }}" download="recon_output.txt">Text report</a>
+</header></div>
+<div class="wrap">
+
+<main>
+<section class="tiles" aria-label="Key figures">
+{% for t in tiles %}
+  <div class="tile depth-{{ t.depth }}" style="--hue:{{ t.hue }}" tabindex="0" data-tip="{{ t.sub }}">
+    <div class="tile-label">{{ icon(t.icon) }}{{ t.label }}<span class="verdict">{{ t.verdict }}</span></div>
+    <div class="tile-value">{{ t.value }}</div>
+    <span class="sr">{{ t.sub }}</span>
+  </div>
+{% endfor %}
+</section>
+
+<section class="card queue" aria-label="Trades">
+  <div class="queue-head">
+    <div class="views" role="group" aria-label="Show">
+      <button class="view" type="button" data-view="open" aria-pressed="true">Open exceptions</button>
+      <button class="view" type="button" data-view="match" aria-pressed="false">Matches</button>
+    </div>
+    <span class="count" id="count" role="status"></span>
+    <button class="btn clear" type="button" id="clear">Clear filters</button>
+    <input class="search" id="search" type="search" placeholder="Search…" aria-label="Search the table">
+  </div>
+  <div class="scroll" tabindex="0"><table class="cases">
+    <thead><tr>
+      <th>Importance<select aria-label="Filter by importance"></select></th>
+      <th>Status<select aria-label="Filter by status"></select></th>
+      <th>Case</th>
+      <th>Instrument<select aria-label="Filter by instrument"></select></th>
+      <th>Broker<select aria-label="Filter by broker"></select></th>
+      <th>Trader<select aria-label="Filter by trader"></select></th>
+      <th>Status time<select aria-label="Filter by day"></select></th>
+    </tr></thead>
+    <tbody>
+{% for st in cases %}
+{{ row("open", st.severity, st.status, case_label(st), st.details.headline or st.what, st.record, st.first_status_at[5:16],
+       [("What", st.what), ("Why", st.why), ("Next", st['next'])]) }}
+{% endfor %}
+{% for st in matches %}
+{{ row("match", "MATCHED", st.status if not st.exceptions else st.status ~ " (was " ~ st.exceptions[-1] ~ ")", match_label(st), st.what, st.record, st.last_event_at[5:16],
+       [("Note", st.note), ("Traded", st.record.created_at), ("Terms", st.record.volume ~ " @ " ~ st.record.price ~ " " ~ st.record.currency ~ ", fee " ~ st.record.fee)]) }}
+{% endfor %}
+    </tbody>
+  </table></div>
+  <p class="none" id="none" hidden>Nothing matches these filters.</p>
+</section>
+
+{% if notices %}
+<section class="card queue" aria-labelledby="notices-title">
+  <div class="queue-head"><div><h2 id="notices-title">Records to check ({{ notices|length }})</h2>
+    <p class="sub">Separate from matching · trade time after receipt · invalid values · conflicting resends</p></div></div>
+{% for e in notices %}
+  <details class="case notice" data-level="{{ e.severity }}">
+    <summary><span class="level">{{ shape(e.severity) }}{{ e.severity }}</span><span class="status">{{ {"DATA_QUALITY": "CHECK", "QUARANTINE": "QUARANTINED"}[e.kind] }}</span>
+      <span class="who"><b>{{ notice_label(e) }}</b><span>{{ e.what }}</span></span>
+      <span class="when">{{ (e.sim_time or "")[5:16] }}</span></summary>
+    <dl class="detail">
+      <dt>Why</dt><dd>{{ points(e.why) }}</dd>
+      <dt>Next</dt><dd>{{ points(e['next']) }}</dd>
+    </dl>
+  </details>
+{% endfor %}
+</section>
+{% endif %}
+
+<div class="lower">
+  <section class="card"><h2>Status by side</h2><div class="scroll" tabindex="0"><table><thead><tr><th>Status</th><th class="num">Trades</th><th class="num">Confirmations</th></tr></thead><tbody>
+{% for s in statuses if totals[internal][s] or totals[confirmation][s] %}
+    <tr><td>{{ s }}</td><td class="num">{{ totals[internal][s] }}</td><td class="num">{{ totals[confirmation][s] }}</td></tr>
+{% endfor %}
+    <tr class="total"><td>Total</td><td class="num">{{ totals[internal].values()|sum }}</td><td class="num">{{ totals[confirmation].values()|sum }}</td></tr>
+  </tbody></table></div></section>
+
+  <section class="card"><h2>Broker timeliness (median minutes)</h2>
+{% if chart.bars %}
+    <div class="lag" style="--deadline:{{ chart.deadline }}%">
+      <div class="axis-title"><span style="left:{{ chart.deadline }}%">{{ chart.deadline_min }} min deadline</span></div>
+{% for b in chart.bars %}
+      <div class="lag-row" tabindex="0" data-tip="{{ b.broker }}: median {{ '%.0f'|format(b.median) }} min, max {{ '%.0f'|format(b.max) }} min, {{ b.n }} confirmations, {{ b.over }} over {{ deadline_label }}, {{ b.open }} open exceptions">
+        <span class="lag-name">{{ b.broker }}</span>
+        <div class="track"><span class="bar" style="width:{{ b.bar }}%"></span><span class="ring" style="left:{{ b.ring }}%"></span></div>
+        <span class="lag-value">{{ '%.0f'|format(b.median) }}</span>
+      </div>
+{% endfor %}
+      <div class="axis" aria-hidden="true">{% for pos, t in chart.ticks %}<span style="left:{{ pos }}%">{{ t }}</span>{% endfor %}</div>
+    </div>
+    <div class="legend">Bar = median · Ring = slowest · Dashed = deadline</div>
+{% else %}
+    <p class="legend">No confirmations yet.</p>
+{% endif %}
+  </section>
+</div>
+</main>
+
+<footer>Yucheng Gong · Marex technical assignment · sample data · not a Marex product</footer>
+</div>
+
+{% for id, title, content, toc in panels %}
+<dialog class="panel" id="{{ id }}" aria-label="{{ title }}">
+  <div class="docs-panel">
+    <div class="docs-head">{{ mark() }}<b>{{ title }}</b><form method="dialog"><button class="btn" autofocus>Close</button></form></div>
+    <div class="docs-body"><nav class="toc" aria-label="Sections">{{ toc|safe }}</nav><article class="prose">{{ content|safe }}</article></div>
+  </div>
+</dialog>
+{% endfor %}
+<div id="tip" role="tooltip"></div>
+
+<script>
+(function () {
+  var all = function (selector) { return Array.prototype.slice.call(document.querySelectorAll(selector)); };
+
+  // Day and night mode. The icon shows the current mode.
+  var root = document.documentElement, themeButton = document.getElementById('theme');
+  function setTheme(theme) {
+    var dark = theme === 'dark';
+    root.dataset.theme = theme;
+    themeButton.setAttribute('aria-pressed', String(dark));
+    themeButton.title = dark ? 'Switch to day mode' : 'Switch to night mode';
+  }
+  themeButton.addEventListener('click', function () {
+    savedTheme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('theme', savedTheme); } catch (e) {}
+    setTheme(savedTheme);
+  });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (event) {
+    if (!savedTheme) setTheme(event.matches ? 'dark' : 'light');
+  });
+  setTheme(root.dataset.theme);
+
+  // Document panels. <dialog> supplies focus trapping, Esc and an inert background; #docs and #howto make them linkable.
+  var panels = all('dialog.panel');
+  function openPanel(panel) {
+    panels.forEach(function (other) { if (other !== panel && other.open) other.close(); });
+    if (!panel.open) panel.showModal();
+  }
+  function followHash() {
+    var target = document.getElementById(location.hash.slice(1));
+    var panel = target && panels.filter(function (p) { return p.contains(target); })[0];
+    if (panel) { openPanel(panel); if (target !== panel) target.scrollIntoView(); }
+  }
+  all('[data-open]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      openPanel(document.getElementById(button.dataset.open));
+      history.replaceState(null, '', '#' + button.dataset.open);
+    });
+  });
+  panels.forEach(function (panel) {
+    panel.addEventListener('click', function (event) { if (event.target === panel) panel.close(); });
+    panel.addEventListener('close', function () {
+      var target = document.getElementById(location.hash.slice(1));
+      if (target && panel.contains(target)) history.replaceState(null, '', location.pathname + location.search);
+    });
+  });
+  window.addEventListener('hashchange', followHash);
+  followHash();
+
+  // The table: one view at a time, narrowed by the header slicers and the search box.
+  // A new column needs one <th> and one <td>; its slicer builds itself from what the cells hold.
+  var rows = all('tr.row'), slicers = all('.cases th select'), search = document.getElementById('search');
+  var count = document.getElementById('count'), none = document.getElementById('none'), viewButtons = all('.view');
+  var view = 'open';
+  function columnOf(select) { return select.parentElement.cellIndex; }
+  function cellValue(row, column) {
+    var cell = row.cells[column];
+    return cell.dataset.value || cell.textContent.trim();
+  }
+  function fillSlicers() {
+    slicers.forEach(function (select) {
+      var seen = [];
+      rows.forEach(function (row) {
+        var value = cellValue(row, columnOf(select));
+        if (row.dataset.view === view && seen.indexOf(value) === -1) seen.push(value);
+      });
+      select.textContent = '';
+      select.add(new Option('All', ''));
+      seen.forEach(function (value) { select.add(new Option(value, value)); });
+    });
+  }
+  function applyFilters() {
+    var words = search.value.trim().toLowerCase().split(/\s+/), inView = 0, shown = 0;
+    rows.forEach(function (row) {
+      var more = row.nextElementSibling, match = row.dataset.view === view;
+      if (match) inView += 1;
+      match = match && slicers.every(function (select) {
+        return !select.value || cellValue(row, columnOf(select)) === select.value;
+      });
+      var text = (row.textContent + ' ' + more.textContent).toLowerCase();
+      match = match && words.every(function (word) { return text.indexOf(word) !== -1; });
+      row.hidden = !match;
+      more.hidden = !match || row.querySelector('.expand').getAttribute('aria-expanded') !== 'true';
+      if (match) shown += 1;
+    });
+    none.hidden = shown > 0;
+    count.textContent = shown + ' of ' + inView + (view === 'open' ? ' open exceptions' : ' matched trades');
+  }
+  viewButtons.forEach(function (button) {
+    button.addEventListener('click', function () {
+      view = button.dataset.view;
+      viewButtons.forEach(function (other) { other.setAttribute('aria-pressed', String(other === button)); });
+      fillSlicers();
+      applyFilters();
+    });
+  });
+  slicers.forEach(function (select) { select.addEventListener('change', applyFilters); });
+  search.addEventListener('input', applyFilters);
+  document.getElementById('clear').addEventListener('click', function () {
+    slicers.forEach(function (select) { select.value = ''; });
+    search.value = '';
+    applyFilters();
+  });
+  rows.forEach(function (row) {
+    var expand = row.querySelector('.expand');
+    expand.addEventListener('click', function (event) {
+      event.stopPropagation();
+      var open = expand.getAttribute('aria-expanded') !== 'true';
+      expand.setAttribute('aria-expanded', String(open));
+      row.nextElementSibling.hidden = !open;
+    });
+    row.addEventListener('click', function () { expand.click(); });
+  });
+  fillSlicers();
+  applyFilters();
+
+  // Tooltips, on hover and on keyboard focus; Esc dismisses them.
+  var tip = document.getElementById('tip');
+  function showTip(owner, x, y) {
+    tip.textContent = owner.dataset.tip;
+    tip.style.display = 'block';
+    tip.style.left = Math.max(8, Math.min(x + 12, window.innerWidth - 290)) + 'px';
+    tip.style.top = (y + 12) + 'px';
+  }
+  function hideTip() { tip.style.display = 'none'; }
+  all('[data-tip]').forEach(function (owner) {
+    owner.addEventListener('pointermove', function (event) { showTip(owner, event.clientX, event.clientY); });
+    owner.addEventListener('pointerleave', hideTip);
+    owner.addEventListener('focus', function () { var box = owner.getBoundingClientRect(); showTip(owner, box.left, box.bottom - 12); });
+    owner.addEventListener('blur', hideTip);
+  });
+  document.addEventListener('keydown', function (event) { if (event.key === 'Escape') hideTip(); });
+})();
+</script>
+</body></html>

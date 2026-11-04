@@ -1,0 +1,314 @@
+==============================================================================================================
+BROKER TRADES RECONCILIATION
+==============================================================================================================
+Rules            : rules-1.4+cfg-8db96c19
+Inputs           : 50 internal trades, 48 broker confirmations, 0 rejected rows
+Processing order : by inserted_at, one record at a time, as they arrive
+Status deadline  : every record gets a definitive status within 120 minutes of becoming visible; it can be updated later
+Time in brackets : the engine's clock when the status was produced
+==============================================================================================================
+
+==============================================================================================================
+SUMMARY  as of 2026-03-07 23:54:08
+==============================================================================================================
+
+  Fully confirmed : 40 of 50 trades
+  Not confirmed   : 10 trades
+  Needs attention : 11 open cases (7 HIGH, 2 MEDIUM, 2 LOW)
+
+  Status                 Internal trades   Confirmations
+  PROCESSED                           40              40
+  BREAK                                7               7
+  UNCONFIRMED                          2               0
+  UNBOOKED                             0               1
+  POSSIBLE_DUPLICATE                   1               0
+  Total                               50              48
+
+  Status deadline check : 98 of 98 records got a definitive status within 120 minutes of becoming visible.
+  Resolved after an exception: trade 4078 (was UNCONFIRMED), confirmation 45381 (was UNBOOKED), trade 6924 (was UNCONFIRMED)
+  Manual actions recorded : 0
+
+  Open exceptions: 11 cases covering 18 records
+    HIGH   POSSIBLE_DUPLICATE  trade 2688                        identical to trade 3961, traded in the same minute
+    HIGH   UNCONFIRMED         trade 6054                        no confirmation from Big Dreams Brokers after 2h
+    HIGH   UNBOOKED            confirmation 69795                no booking by Elsa Snow after 2h
+    HIGH   BREAK               trade 9974 / confirmation 97051   broker Big Dreams Brokers vs Golden Goose Trading
+    HIGH   UNCONFIRMED         trade 8005                        no confirmation from Moonshot Capital after 2h; identical to trade 9711, 39 min apart
+    HIGH   BREAK               trade 6146 / confirmation 99291   currency EUR vs USD
+    HIGH   BREAK               trade 8628 / confirmation 68411   volume 100 vs 101
+    MEDIUM BREAK               trade 2596 / confirmation 72141   fee 10 vs 12.5
+    MEDIUM BREAK               trade 4374 / confirmation 50580   trade date 2026-03-06 vs 2026-03-07
+    LOW    BREAK               trade 2028 / confirmation 18519   trader Donald Duck vs Donlad Duck
+    LOW    BREAK               trade 1976 / confirmation 17952   instrument NVIDIA vs NVDA
+
+  Confirmation lag by broker (received minus trade time)
+    Big Dreams Brokers          8 confirmations   median     63 min   max   111 min   over 2h  0
+    Golden Goose Trading       14 confirmations   median     42 min   max    93 min   over 2h  0
+    Lazy Panda Securities      14 confirmations   median     54 min   max   149 min   over 2h  2
+    Moonshot Capital           11 confirmations   median     70 min   max   178 min   over 2h  2
+    (1 dated after receipt left out; see records to check)
+  Booking lag by trader (booked minus trade time)
+    Donald Duck                10 bookings        median     30 min   max    54 min   over 2h  0
+    Elsa Snow                   9 bookings        median     11 min   max    48 min   over 2h  0
+    Mickey Mouse               11 bookings        median      2 min   max    39 min   over 2h  0
+    Peter Pan                  13 bookings        median     25 min   max    49 min   over 2h  0
+    Simba King                  7 bookings        median     22 min   max   145 min   over 2h  1
+
+  Records to check: 2
+    MEDIUM confirmation 50580    Trade time 2026-03-07 11:03:00 is 23h13m after receipt (2026-03-06 11:50:00).
+    INFO   confirmation 94820    Trade time is 49s after receipt, within the 5 min tolerance. Trade 9133 was t
+
+==============================================================================================================
+STATUS MESSAGES, IN TIME ORDER
+==============================================================================================================
+
+[2026-03-02 10:27:09] PROCESSED trade 9779, matched with confirmation 85290
+[2026-03-02 11:35:00] PROCESSED trade 3961, matched with confirmation 19012
+[2026-03-02 13:06:14] PROCESSED trade 4517, matched with confirmation 68829
+[2026-03-02 13:09:00] POSSIBLE_DUPLICATE  severity=HIGH
+    trade 2688          TESLA 100 @ 245.7 USD, fee 20, Donald Duck, Golden Goose Trading, traded 2026-03-02 11:05:00
+    identical to:
+    trade 3961          TESLA 100 @ 245.7 USD, fee 20, Donald Duck, Golden Goose Trading, traded 2026-03-02 11:05:00
+    What : No confirmation. Identical to trade 3961, matched with confirmation 19012: traded in the same
+            minute, booked 1 min apart.
+    Why  : Same terms, almost the same time: likely booked twice.
+    Next : Ask Donald Duck to confirm, then cancel the duplicate.
+
+[2026-03-02 13:39:06] PROCESSED trade 2013, matched with confirmation 15138
+[2026-03-02 16:12:00] UNCONFIRMED  severity=HIGH
+    trade 4078          NVIDIA 75 @ 129.45 USD, fee 15, Peter Pan, Lazy Panda Securities, traded 2026-03-02 14:10:00
+    What : No confirmation 2h after booking, and none within 2 differences.
+    Why  : Lazy Panda Securities has not sent it, wrong broker booked, or trade not done.
+    Next : Chase Lazy Panda Securities and ask Peter Pan if the trade was done.
+
+[2026-03-02 16:47:00] PROCESSED trade 4078, matched with confirmation 22267  (resolved: trade 4078 was UNCONFIRMED; the confirmation arrived 35 min after the 2h deadline)
+
+[2026-03-02 17:36:31] PROCESSED trade 3028, matched with confirmation 74089
+[2026-03-02 20:01:58] PROCESSED trade 1614, matched with confirmation 47740
+[2026-03-02 20:26:10] PROCESSED trade 2408, matched with confirmation 89817
+--------------------------------------------------------------------------------------------------------------
+END OF DAY 2026-03-02  as of 2026-03-03 00:00:00
+  trades        :   9 seen  |  PROCESSED 8  POSSIBLE_DUPLICATE 1
+  confirmations :   8 seen  |  PROCESSED 8
+  Open records: 1
+    HIGH   POSSIBLE_DUPLICATE  trade 2688           open  12h51m   identical to trade 3961, traded in the same minute
+--------------------------------------------------------------------------------------------------------------
+
+[2026-03-03 11:14:51] PROCESSED trade 8104, matched with confirmation 19594
+[2026-03-03 11:25:00] UNBOOKED  severity=HIGH
+    confirmation 45381  APPLE 40 @ 188.32 USD, fee 7.5, Simba King, Moonshot Capital, traded 2026-03-03 09:21:00
+    What : No booking 2h after the confirmation arrived.
+    Why  : Simba King may have forgotten it, or booked it elsewhere.
+    Next : Contact Simba King now: position may be wrong. Book it, or link it with force-match.
+
+[2026-03-03 11:45:00] PROCESSED trade 7101, matched with confirmation 45381  (resolved: confirmation 45381 was UNBOOKED; the booking arrived 20 min after the 2h deadline)
+
+[2026-03-03 12:08:30] PROCESSED trade 4943, matched with confirmation 64804
+[2026-03-03 12:19:10] UNCONFIRMED  severity=HIGH
+    trade 6054          ASML 50 @ 712.5 EUR, fee 12.5, Mickey Mouse, Big Dreams Brokers, traded 2026-03-03 10:14:10
+    What : No confirmation 2h after booking, and none within 2 differences.
+    Why  : Big Dreams Brokers has not sent it, wrong broker booked, or trade not done.
+    Next : Chase Big Dreams Brokers and ask Mickey Mouse if the trade was done.
+
+[2026-03-03 15:40:15] PROCESSED trade 7851, matched with confirmation 25475
+[2026-03-03 16:29:13] PROCESSED trade 1968, matched with confirmation 29920
+[2026-03-03 16:37:14] PROCESSED trade 1950, matched with confirmation 74895
+--------------------------------------------------------------------------------------------------------------
+END OF DAY 2026-03-03  as of 2026-03-04 00:00:00
+  trades        :  16 seen  |  PROCESSED 14  UNCONFIRMED 1  POSSIBLE_DUPLICATE 1
+  confirmations :  14 seen  |  PROCESSED 14
+  Open records: 2
+    HIGH   POSSIBLE_DUPLICATE  trade 2688           open  36h51m   identical to trade 3961, traded in the same minute
+    HIGH   UNCONFIRMED         trade 6054           open  13h40m   no confirmation from Big Dreams Brokers after 2h
+--------------------------------------------------------------------------------------------------------------
+
+[2026-03-04 11:23:06] PROCESSED trade 2486, matched with confirmation 31621
+[2026-03-04 11:35:23] PROCESSED trade 4657, matched with confirmation 65272
+[2026-03-04 14:47:00] BREAK  severity=MEDIUM
+    trade 2596          AMAZON 25 @ 177.15 USD, fee 10, Elsa Snow, Big Dreams Brokers, traded 2026-03-04 12:45:00
+    confirmation 72141  AMAZON 25 @ 177.15 USD, fee 12.5, Elsa Snow, Big Dreams Brokers, traded 2026-03-04 12:50:00
+    What : fee differs: trade 10, confirmation 12.5. All other terms agree.
+    Why  : Per unit: booking 0.4, broker 0.5. Wrong commission rate or old fee schedule.
+    Next : Check the commission agreed with Big Dreams Brokers. Amend the booking, or ask the broker to
+            reissue.
+
+[2026-03-04 17:32:05] UNBOOKED  severity=HIGH
+    confirmation 69795  NETFLIX 77 @ 411.1 USD, fee 17.5, Elsa Snow, Moonshot Capital, traded 2026-03-04 15:20:05
+    What : No booking 2h after the confirmation arrived.
+    Why  : Elsa Snow may have forgotten it, or booked it elsewhere.
+    Next : Contact Elsa Snow now: position may be wrong. Book it, or link it with force-match.
+
+[2026-03-04 18:06:15] PROCESSED trade 3363, matched with confirmation 87905
+[2026-03-04 18:31:00] BREAK  severity=HIGH
+    trade 9974          MICROSOFT 20 @ 402.6 USD, fee 5, Mickey Mouse, Big Dreams Brokers, traded 2026-03-04 16:30:00
+    confirmation 97051  MICROSOFT 20 @ 402.6 USD, fee 5, Mickey Mouse, Golden Goose Trading, traded 2026-03-04 16:36:00
+    What : broker differs: trade Big Dreams Brokers, confirmation Golden Goose Trading. All other terms agree.
+    Why  : Booked with Big Dreams Brokers, confirmed by Golden Goose Trading. Wrong broker probably selected.
+    Next : Ask Mickey Mouse which broker executed. Amend the booking, or contact Golden Goose Trading if the
+            trade is not theirs.
+
+[2026-03-04 19:16:02] PROCESSED trade 4622, matched with confirmation 83148
+--------------------------------------------------------------------------------------------------------------
+END OF DAY 2026-03-04  as of 2026-03-05 00:00:00
+  trades        :  22 seen  |  PROCESSED 18  BREAK 2  UNCONFIRMED 1  POSSIBLE_DUPLICATE 1
+  confirmations :  21 seen  |  PROCESSED 18  BREAK 2  UNBOOKED 1
+  Open records: 7
+    HIGH   POSSIBLE_DUPLICATE  trade 2688           open  60h51m   identical to trade 3961, traded in the same minute
+    HIGH   UNCONFIRMED         trade 6054           open  37h40m   no confirmation from Big Dreams Brokers after 2h
+    HIGH   UNBOOKED            confirmation 69795   open   8h27m   no booking by Elsa Snow after 2h
+    HIGH   BREAK               trade 9974           open   7h29m   broker Big Dreams Brokers vs Golden Goose Trading
+    HIGH   BREAK               confirmation 97051   open   7h12m   broker Big Dreams Brokers vs Golden Goose Trading
+    MEDIUM BREAK               trade 2596           open  11h13m   fee 10 vs 12.5
+    MEDIUM BREAK               confirmation 72141   open  10h53m   fee 10 vs 12.5
+--------------------------------------------------------------------------------------------------------------
+
+[2026-03-05 11:07:40] PROCESSED trade 2186, matched with confirmation 20728
+[2026-03-05 11:50:28] PROCESSED trade 3471, matched with confirmation 42561
+[2026-03-05 12:09:00] BREAK  severity=LOW
+    trade 2028          META 15 @ 533.2 USD, fee 7.5, Donald Duck, Lazy Panda Securities, traded 2026-03-05 10:05:00
+    confirmation 18519  META 15 @ 533.2 USD, fee 7.5, Donlad Duck, Lazy Panda Securities, traded 2026-03-05 10:15:00
+    What : trader differs: trade Donald Duck, confirmation Donlad Duck. All other terms agree.
+    Why  : Names 91% similar: spelling error.
+    Next : Check the trader's name internally and update it. Add it to mappings.trader if it recurs.
+
+[2026-03-05 12:23:52] PROCESSED trade 3181, matched with confirmation 51123
+[2026-03-05 12:44:05] PROCESSED trade 7468, matched with confirmation 33562
+[2026-03-05 15:21:00] BREAK  severity=LOW
+    trade 1976          NVIDIA 150 @ 131.8 USD, fee 25, Peter Pan, Moonshot Capital, traded 2026-03-05 13:15:00
+    confirmation 17952  NVDA 150 @ 131.8 USD, fee 25, Peter Pan, Moonshot Capital, traded 2026-03-05 13:27:00
+    What : instrument differs: trade NVIDIA, confirmation NVDA. All other terms agree.
+    Why  : NVIDIA and NVDA: same product, ticker versus name.
+    Next : Confirm, then add 'NVDA: NVIDIA' to mappings.instrument so it matches next time.
+
+[2026-03-05 15:27:01] PROCESSED trade 9313, matched with confirmation 55020
+[2026-03-05 18:26:44] PROCESSED trade 7955, matched with confirmation 54833
+[2026-03-05 18:44:39] PROCESSED trade 1791, matched with confirmation 41994
+[2026-03-05 18:56:18] PROCESSED trade 7867, matched with confirmation 55898
+[2026-03-05 20:42:33] PROCESSED trade 6991, matched with confirmation 78838
+--------------------------------------------------------------------------------------------------------------
+END OF DAY 2026-03-05  as of 2026-03-06 00:00:00
+  trades        :  33 seen  |  PROCESSED 27  BREAK 4  UNCONFIRMED 1  POSSIBLE_DUPLICATE 1
+  confirmations :  32 seen  |  PROCESSED 27  BREAK 4  UNBOOKED 1
+  Open records: 11
+    HIGH   POSSIBLE_DUPLICATE  trade 2688           open  84h51m   identical to trade 3961, traded in the same minute
+    HIGH   UNCONFIRMED         trade 6054           open  61h40m   no confirmation from Big Dreams Brokers after 2h
+    HIGH   UNBOOKED            confirmation 69795   open  32h27m   no booking by Elsa Snow after 2h
+    HIGH   BREAK               trade 9974           open  31h29m   broker Big Dreams Brokers vs Golden Goose Trading
+    HIGH   BREAK               confirmation 97051   open  31h12m   broker Big Dreams Brokers vs Golden Goose Trading
+    MEDIUM BREAK               trade 2596           open  35h13m   fee 10 vs 12.5
+    MEDIUM BREAK               confirmation 72141   open  34h53m   fee 10 vs 12.5
+    LOW    BREAK               trade 2028           open  13h51m   trader Donald Duck vs Donlad Duck
+    LOW    BREAK               confirmation 18519   open  13h31m   trader Donald Duck vs Donlad Duck
+    LOW    BREAK               trade 1976           open  10h39m   instrument NVIDIA vs NVDA
+    LOW    BREAK               confirmation 17952   open   9h59m   instrument NVIDIA vs NVDA
+--------------------------------------------------------------------------------------------------------------
+
+[2026-03-06 11:50:00] DATA QUALITY  severity=MEDIUM
+    confirmation 50580  TESLA 50 @ 251.1 USD, fee 12.5, Simba King, Golden Goose Trading, traded 2026-03-07 11:03:00
+    What : Trade time 2026-03-07 11:03:00 is 23h13m after receipt (2026-03-06 11:50:00).
+    Why  : A trade cannot be dated after its receipt: date probably wrong.
+    Next : Trade date is suspect: watch for a related BREAK.
+
+[2026-03-06 13:02:00] BREAK  severity=MEDIUM
+    trade 4374          TESLA 50 @ 251.1 USD, fee 12.5, Simba King, Golden Goose Trading, traded 2026-03-06 11:00:00
+    confirmation 50580  TESLA 50 @ 251.1 USD, fee 12.5, Simba King, Golden Goose Trading, traded 2026-03-07 11:03:00
+    What : trade date differs: trade 2026-03-06, confirmation 2026-03-07. All other terms agree.
+    Why  : Confirmation 50580 traded 2026-03-07 11:03:00, after it was received (2026-03-06 11:50:00):
+            impossible. Broker date typo likely. Time of day is 3 min from the other side.
+    Next : Ask Golden Goose Trading to reissue with trade date 2026-03-06.
+
+[2026-03-06 14:46:04] PROCESSED trade 9133, matched with confirmation 94820
+[2026-03-06 14:46:04] DATA QUALITY  severity=INFO
+    confirmation 94820  ASML 30 @ 705 EUR, fee 10, Elsa Snow, Lazy Panda Securities, traded 2026-03-06 14:46:53
+    What : Trade time is 49s after receipt, within the 5 min tolerance. Trade 9133 was timed 35.8 min away.
+    Why  : Clock drift or a mistyped time: the data cannot tell.
+    Next : No action on the match. Check the time if it repeats.
+
+[2026-03-06 15:44:07] PROCESSED trade 2542, matched with confirmation 49354
+[2026-03-06 16:45:58] PROCESSED trade 2144, matched with confirmation 77100
+[2026-03-06 17:11:00] PROCESSED trade 9711, matched with confirmation 85752
+[2026-03-06 18:42:00] UNCONFIRMED  severity=HIGH
+    trade 8005          APPLE 20 @ 191.6 USD, fee 5, Mickey Mouse, Moonshot Capital, traded 2026-03-06 16:40:00
+    identical to:
+    trade 9711          APPLE 20 @ 191.6 USD, fee 5, Mickey Mouse, Moonshot Capital, traded 2026-03-06 16:01:00
+    What : No confirmation 2h after booking, and none within 2 differences. Identical to trade 9711, matched
+            with confirmation 85752: traded 39 min apart, booked 39 min apart.
+    Why  : Same terms, 39 min apart: second real trade, or a duplicate booking.
+    Next : Ask Mickey Mouse how many were done. If two, chase Moonshot Capital; if one, cancel the duplicate.
+
+[2026-03-06 19:40:17] PROCESSED trade 1763, matched with confirmation 85107
+--------------------------------------------------------------------------------------------------------------
+END OF DAY 2026-03-06  as of 2026-03-07 00:00:00
+  trades        :  40 seen  |  PROCESSED 32  BREAK 5  UNCONFIRMED 2  POSSIBLE_DUPLICATE 1
+  confirmations :  38 seen  |  PROCESSED 32  BREAK 5  UNBOOKED 1
+  Open records: 14
+    HIGH   POSSIBLE_DUPLICATE  trade 2688           open 108h51m   identical to trade 3961, traded in the same minute
+    HIGH   UNCONFIRMED         trade 6054           open  85h40m   no confirmation from Big Dreams Brokers after 2h
+    HIGH   UNBOOKED            confirmation 69795   open  56h27m   no booking by Elsa Snow after 2h
+    HIGH   BREAK               trade 9974           open  55h29m   broker Big Dreams Brokers vs Golden Goose Trading
+    HIGH   BREAK               confirmation 97051   open  55h12m   broker Big Dreams Brokers vs Golden Goose Trading
+    HIGH   UNCONFIRMED         trade 8005           open   7h18m   no confirmation from Moonshot Capital after 2h; identical to trade 9711, 39 min apart
+    MEDIUM BREAK               trade 2596           open  59h13m   fee 10 vs 12.5
+    MEDIUM BREAK               confirmation 72141   open  58h53m   fee 10 vs 12.5
+    MEDIUM BREAK               trade 4374           open  12h58m   trade date 2026-03-06 vs 2026-03-07
+    MEDIUM BREAK               confirmation 50580   open  12h10m   trade date 2026-03-06 vs 2026-03-07
+    LOW    BREAK               trade 2028           open  37h51m   trader Donald Duck vs Donlad Duck
+    LOW    BREAK               confirmation 18519   open  37h31m   trader Donald Duck vs Donlad Duck
+    LOW    BREAK               trade 1976           open  34h39m   instrument NVIDIA vs NVDA
+    LOW    BREAK               confirmation 17952   open  33h59m   instrument NVIDIA vs NVDA
+--------------------------------------------------------------------------------------------------------------
+
+[2026-03-07 12:18:16] PROCESSED trade 1812, matched with confirmation 20173
+[2026-03-07 12:26:00] BREAK  severity=HIGH
+    trade 6146          ASML 25 @ 698.7 EUR, fee 12.5, Peter Pan, Big Dreams Brokers, traded 2026-03-07 10:25:00
+    confirmation 99291  ASML 25 @ 698.7 USD, fee 12.5, Peter Pan, Big Dreams Brokers, traded 2026-03-07 10:33:00
+    What : currency differs: trade EUR, confirmation USD. All other terms agree.
+    Why  : Booked in EUR, confirmed in USD: possibly a default currency left unchanged.
+    Next : Check the agreed currency with Peter Pan and Big Dreams Brokers, then amend the wrong side.
+
+[2026-03-07 13:02:37] PROCESSED trade 2929, matched with confirmation 86008
+[2026-03-07 13:09:32] PROCESSED trade 9858, matched with confirmation 75100
+[2026-03-07 14:21:00] BREAK  severity=HIGH
+    trade 8628          NVIDIA 100 @ 130.2 USD, fee 15, Simba King, Lazy Panda Securities, traded 2026-03-07 12:20:00
+    confirmation 68411  NVIDIA 101 @ 130.2 USD, fee 15, Simba King, Lazy Panda Securities, traded 2026-03-07 12:23:00
+    What : volume differs: trade 100, confirmation 101. All other terms agree.
+    Why  : Only 1 apart: typing error.
+    Next : Check the chat log for the agreed size and amend the wrong side. Position is wrong until fixed.
+
+[2026-03-07 14:49:29] PROCESSED trade 6305, matched with confirmation 49291
+[2026-03-07 14:54:00] PROCESSED trade 8424, matched with confirmation 47302
+[2026-03-07 15:09:09] PROCESSED trade 7499, matched with confirmation 97584
+[2026-03-07 20:12:00] UNCONFIRMED  severity=HIGH
+    trade 6924          MICROSOFT 60 @ 399.9 USD, fee 20, Mickey Mouse, Moonshot Capital, traded 2026-03-07 18:10:00
+    What : No confirmation 2h after booking, and none within 2 differences.
+    Why  : Moonshot Capital has not sent it, wrong broker booked, or trade not done.
+    Next : Chase Moonshot Capital and ask Mickey Mouse if the trade was done.
+
+[2026-03-07 21:17:00] PROCESSED trade 6924, matched with confirmation 60566  (resolved: trade 6924 was UNCONFIRMED; the confirmation arrived 1h05m after the 2h deadline)
+
+[2026-03-07 21:54:08] PROCESSED trade 5744, matched with confirmation 54580
+--------------------------------------------------------------------------------------------------------------
+END OF DAY 2026-03-07  (end of data)  as of 2026-03-07 23:54:08
+  trades        :  50 seen  |  PROCESSED 40  BREAK 7  UNCONFIRMED 2  POSSIBLE_DUPLICATE 1
+  confirmations :  48 seen  |  PROCESSED 40  BREAK 7  UNBOOKED 1
+  Open records: 18
+    HIGH   POSSIBLE_DUPLICATE  trade 2688           open 132h45m   identical to trade 3961, traded in the same minute
+    HIGH   UNCONFIRMED         trade 6054           open 109h34m   no confirmation from Big Dreams Brokers after 2h
+    HIGH   UNBOOKED            confirmation 69795   open  80h22m   no booking by Elsa Snow after 2h
+    HIGH   BREAK               trade 9974           open  79h23m   broker Big Dreams Brokers vs Golden Goose Trading
+    HIGH   BREAK               confirmation 97051   open  79h06m   broker Big Dreams Brokers vs Golden Goose Trading
+    HIGH   UNCONFIRMED         trade 8005           open  31h12m   no confirmation from Moonshot Capital after 2h; identical to trade 9711, 39 min apart
+    HIGH   BREAK               trade 6146           open  13h28m   currency EUR vs USD
+    HIGH   BREAK               confirmation 99291   open  12h49m   currency EUR vs USD
+    HIGH   BREAK               trade 8628           open  11h33m   volume 100 vs 101
+    HIGH   BREAK               confirmation 68411   open  11h14m   volume 100 vs 101
+    MEDIUM BREAK               trade 2596           open  83h07m   fee 10 vs 12.5
+    MEDIUM BREAK               confirmation 72141   open  82h47m   fee 10 vs 12.5
+    MEDIUM BREAK               trade 4374           open  36h52m   trade date 2026-03-06 vs 2026-03-07
+    MEDIUM BREAK               confirmation 50580   open  36h04m   trade date 2026-03-06 vs 2026-03-07
+    LOW    BREAK               trade 2028           open  61h45m   trader Donald Duck vs Donlad Duck
+    LOW    BREAK               confirmation 18519   open  61h25m   trader Donald Duck vs Donlad Duck
+    LOW    BREAK               trade 1976           open  58h33m   instrument NVIDIA vs NVDA
+    LOW    BREAK               confirmation 17952   open  57h53m   instrument NVIDIA vs NVDA
+--------------------------------------------------------------------------------------------------------------
+

@@ -1,0 +1,348 @@
+==============================================================================================================
+BROKER TRADES RECONCILIATION
+==============================================================================================================
+Rules            : RULES
+Inputs           : 20 internal trades, 19 broker confirmations, 2 rejected rows
+Processing order : by inserted_at, one record at a time, as they arrive
+Status deadline  : every record gets a definitive status within 120 minutes of becoming visible; it can be updated later
+Time in brackets : the engine's clock when the status was produced
+==============================================================================================================
+
+==============================================================================================================
+SUMMARY  as of 2026-04-02 11:00:00
+==============================================================================================================
+
+  Fully confirmed : 8 of 20 trades
+  Not confirmed   : 12 trades
+  Needs attention : 16 open cases (13 HIGH, 2 MEDIUM, 1 LOW)
+
+  Status                 Internal trades   Confirmations
+  PROCESSED                            8               7
+  BREAK                                7               8
+  UNCONFIRMED                          4               0
+  UNBOOKED                             0               4
+  POSSIBLE_DUPLICATE                   1               0
+  Total                               20              19
+
+  Status deadline check : 39 of 39 records got a definitive status within 120 minutes of becoming visible.
+  Resolved after an exception: trade 9005 (was BREAK)
+  Manual actions recorded : 2
+
+  Open exceptions: 16 cases covering 24 records
+    HIGH   UNCONFIRMED         trade 8999                        no confirmation from Moonshot Capital after 2h
+    HIGH   UNBOOKED            confirmation 9105                 no booking by Peter Pan after 2h
+    HIGH   UNBOOKED            confirmation 9106                 no booking by Peter Pan after 2h
+    HIGH   BREAK               trade 9006 / confirmation 9108    currency EUR vs USD
+    HIGH   BREAK               trade 9007 / confirmation 9109    price 17.15 vs 171.5
+    HIGH   BREAK               trade 9008 / confirmation 9110    price 12.45 vs 12.54; trader Donald Duck vs Donlad Duck
+    HIGH   BREAK               trade 9009 / confirmation 9111    volume 100 vs 101
+    HIGH   UNCONFIRMED         trade 9014                        no confirmation from Moonshot Capital after 2h
+    HIGH   UNBOOKED            confirmation 9116                 no booking by Elsa Snow after 2h; identical to confirmation 9114 (resend or second trade?)
+    HIGH   UNCONFIRMED         trade 9015                        no confirmation from Moonshot Capital after 2h
+    HIGH   UNCONFIRMED         trade 9016                        no confirmation from Moonshot Capital after 2h
+    HIGH   POSSIBLE_DUPLICATE  trade 9018                        identical to trade 9017, traded in the same minute
+    HIGH   UNBOOKED            confirmation 9117                 no booking by Nobody after 2h
+    MEDIUM BREAK               trade 9003 / confirmation 9102, confirmation 9103aggregation: 2 records add up to trade 9003
+    MEDIUM BREAK               trade 9011 / confirmation 9113    trade date 2026-04-01 vs 2026-04-02
+    LOW    BREAK               trade 9010 / confirmation 9112    instrument NVIDIA vs NVDA
+
+  Confirmation lag by broker (received minus trade time)
+    Big Dreams Brokers          7 confirmations   median     14 min   max   225 min   over 2h  1
+    Ghost Brokers               1 confirmations   median     60 min   max    60 min   over 2h  0
+    Lazy Panda Securities       3 confirmations   median     20 min   max    21 min   over 2h  0
+    Moonshot Capital            7 confirmations   median     24 min   max    24 min   over 2h  0
+    (1 dated after receipt left out; see records to check)
+  Booking lag by trader (booked minus trade time)
+    Donald Duck                 4 bookings        median     10 min   max    10 min   over 2h  0
+    Elsa Snow                  10 bookings        median      5 min   max    10 min   over 2h  0
+    Peter Pan                   5 bookings        median      5 min   max     6 min   over 2h  0
+    (1 dated after receipt left out; see records to check)
+
+  Records to check: 5
+    INFO   trade 9014            Trade time is 300s after receipt, within the 5 min tolerance.
+    MEDIUM confirmation 9113     Trade time 2026-04-02 10:16:00 is 23h36m after receipt (2026-04-01 10:40:00).
+    MEDIUM trade 9015            Trade time 2026-04-01 13:45:00 is 2h55m after receipt (2026-04-01 10:50:00).
+    HIGH   internal row 22       Row 22 of the internal feed rejected: price must be positive: -5.
+    HIGH   trade 9000            trade 9000 arrived again, changed (row 23): volume: 10 -> 99.
+
+==============================================================================================================
+STATUS MESSAGES, IN TIME ORDER
+==============================================================================================================
+
+[2026-03-31 10:00:00] UNCONFIRMED  severity=HIGH
+    trade 8999          SEK 5 @ 20 USD, fee 1, Elsa Snow, Moonshot Capital, traded 2026-03-31 07:55:00
+    What : No confirmation 2h after booking, and none within 2 differences.
+    Why  : Moonshot Capital has not sent it, wrong broker booked, or trade not done.
+    Next : Chase Moonshot Capital and ask Elsa Snow if the trade was done.
+
+--------------------------------------------------------------------------------------------------------------
+END OF DAY 2026-03-31  as of 2026-04-01 00:00:00
+  trades        :   1 seen  |  UNCONFIRMED 1
+  confirmations :   0 seen  |  
+  Open records: 1
+    HIGH   UNCONFIRMED         trade 8999           open  16h00m   no confirmation from Moonshot Capital after 2h
+--------------------------------------------------------------------------------------------------------------
+
+[2026-04-01 08:10:00] PROCESSED trade 9000, matched with confirmation 9100
+[2026-04-01 10:40:00] DATA QUALITY  severity=INFO
+    trade 9014          APPLE 7 @ 190 USD, fee 2, Elsa Snow, Moonshot Capital, traded 2026-04-01 10:45:00
+    What : Trade time is 300s after receipt, within the 5 min tolerance.
+    Why  : Clock drift or a mistyped time: the data cannot tell.
+    Next : No action on the match. Check the time if it repeats.
+
+[2026-04-01 10:40:00] DATA QUALITY  severity=MEDIUM
+    confirmation 9113   META 10 @ 600 USD, fee 5, Donald Duck, Lazy Panda Securities, traded 2026-04-02 10:16:00
+    What : Trade time 2026-04-02 10:16:00 is 23h36m after receipt (2026-04-01 10:40:00).
+    Why  : A trade cannot be dated after its receipt: date probably wrong.
+    Next : Trade date is suspect: watch for a related BREAK.
+
+[2026-04-01 10:45:00] PROCESSED trade 9012, matched with confirmation 9114
+[2026-04-01 10:46:00] PROCESSED trade 9013, matched with confirmation 9115
+[2026-04-01 10:50:00] DATA QUALITY  severity=MEDIUM
+    trade 9015          APPLE 7 @ 191 USD, fee 2, Elsa Snow, Moonshot Capital, traded 2026-04-01 13:45:00
+    What : Trade time 2026-04-01 13:45:00 is 2h55m after receipt (2026-04-01 10:50:00).
+    Why  : A trade cannot be dated after its receipt: date probably wrong.
+    Next : Trade date is suspect: watch for a related BREAK.
+
+[2026-04-01 11:00:00] BREAK  severity=MEDIUM  [aggregation]
+    trade 9001          APPLE 60 @ 100 USD, fee 6, Elsa Snow, Moonshot Capital, traded 2026-04-01 08:58:00
+    trade 9002          APPLE 40 @ 101 USD, fee 4, Elsa Snow, Moonshot Capital, traded 2026-04-01 08:59:00
+    confirmation 9101   APPLE 100 @ 100.4 USD, fee 10, Elsa Snow, Moonshot Capital, traded 2026-04-01 09:00:00
+    What : 2 trades (trade 9002, trade 9001) add up to confirmation 9101: volume 40 + 60 = 100, fees 4 + 6 =
+            10, weighted price rounds to 100.4.
+    Why  : Broker likely aggregated fills into one confirmation.
+    Next : Confirm the grouping with the trader, then accept it or ask the broker to reissue.
+
+[2026-04-01 11:05:00] BREAK  severity=MEDIUM  [aggregation]
+    trade 9003          TESLA 100 @ 200 USD, fee 10, Peter Pan, Big Dreams Brokers, traded 2026-04-01 09:00:00
+    confirmation 9102   TESLA 60 @ 200 USD, fee 6, Peter Pan, Big Dreams Brokers, traded 2026-04-01 09:01:00
+    confirmation 9103   TESLA 40 @ 200 USD, fee 4, Peter Pan, Big Dreams Brokers, traded 2026-04-01 09:02:00
+    What : 2 confirmations (confirmation 9102, confirmation 9103) add up to trade 9003: volume 60 + 40 = 100,
+            fees 6 + 4 = 10, weighted price rounds to 200.
+    Why  : Broker likely split one trade into several confirmations.
+    Next : Confirm the grouping with the trader, then accept it or ask the broker to reissue.
+
+[2026-04-01 11:10:00] BREAK  severity=MEDIUM
+    trade 9004          META 10 @ 100 USD, fee 5, Peter Pan, Big Dreams Brokers, traded 2026-04-01 09:05:00
+    candidates:
+    confirmation 9104   META 10 @ 100 USD, fee 6, Peter Pan, Big Dreams Brokers, traded 2026-04-01 09:06:00
+    confirmation 9105   META 10 @ 100 USD, fee 7, Peter Pan, Big Dreams Brokers, traded 2026-04-01 09:06:00
+    What : 2 possible counterparts, equally close: confirmation 9104 (fee differs); confirmation 9105 (fee
+            differs).
+    Why  : Cannot tell which pairing is right, so none is picked.
+    Next : Check the chat log and link the right pair with force-match.
+
+[2026-04-01 11:20:00] BREAK  severity=MEDIUM
+    trade 9005          MSFT 10 @ 50 USD, fee 5, Peter Pan, Big Dreams Brokers, traded 2026-04-01 09:15:00
+    confirmation 9106   MSFT 10 @ 50 USD, fee 6, Peter Pan, Big Dreams Brokers, traded 2026-04-01 09:16:00
+    What : fee differs: trade 5, confirmation 6. All other terms agree.
+    Why  : Per unit: booking 0.5, broker 0.6. Wrong commission rate or old fee schedule.
+    Next : Check the commission agreed with Big Dreams Brokers. Amend the booking, or ask the broker to
+            reissue.
+
+[2026-04-01 11:20:00] BREAK  severity=MEDIUM
+    confirmation 9104   META 10 @ 100 USD, fee 6, Peter Pan, Big Dreams Brokers, traded 2026-04-01 09:06:00
+    candidates:
+    trade 9004          META 10 @ 100 USD, fee 5, Peter Pan, Big Dreams Brokers, traded 2026-04-01 09:05:00
+    What : Closest is trade 9004 (fee differs), but another record fits equally well.
+    Why  : Cannot tell which pairing is right, so none is picked.
+    Next : Check the chat log and link the right pair with force-match.
+
+[2026-04-01 11:21:00] BREAK  severity=MEDIUM
+    confirmation 9105   META 10 @ 100 USD, fee 7, Peter Pan, Big Dreams Brokers, traded 2026-04-01 09:06:00
+    candidates:
+    trade 9004          META 10 @ 100 USD, fee 5, Peter Pan, Big Dreams Brokers, traded 2026-04-01 09:05:00
+    What : Closest is trade 9004 (fee differs), but another record fits equally well.
+    Why  : Cannot tell which pairing is right, so none is picked.
+    Next : Check the chat log and link the right pair with force-match.
+
+[2026-04-01 12:00:00] BREAK  severity=HIGH
+    trade 9006          NFLX 10 @ 500 EUR, fee 5, Elsa Snow, Moonshot Capital, traded 2026-04-01 09:50:00
+    confirmation 9108   NFLX 10 @ 500 USD, fee 5, Elsa Snow, Moonshot Capital, traded 2026-04-01 09:51:00
+    What : currency differs: trade EUR, confirmation USD. All other terms agree.
+    Why  : Booked in EUR, confirmed in USD: possibly a default currency left unchanged.
+    Next : Check the agreed currency with Elsa Snow and Moonshot Capital, then amend the wrong side.
+
+[2026-04-01 12:05:00] BREAK  severity=HIGH
+    trade 9007          AMZN 25 @ 17.15 USD, fee 10, Elsa Snow, Moonshot Capital, traded 2026-04-01 09:55:00
+    confirmation 9109   AMZN 25 @ 171.5 USD, fee 10, Elsa Snow, Moonshot Capital, traded 2026-04-01 09:56:00
+    What : price differs: trade 17.15, confirmation 171.5. All other terms agree.
+    Why  : Exactly 10x apart: decimal shift.
+    Next : Check the chat log for the agreed price. Amend the booking, or ask the broker to reissue.
+
+[2026-04-01 12:10:00] BREAK  severity=HIGH
+    trade 9008          ASML 30 @ 12.45 USD, fee 10, Donald Duck, Moonshot Capital, traded 2026-04-01 10:00:00
+    confirmation 9110   ASML 30 @ 12.54 USD, fee 10, Donlad Duck, Moonshot Capital, traded 2026-04-01 10:01:00
+    What : price differs: trade 12.45, confirmation 12.54; trader differs: trade Donald Duck, confirmation
+            Donlad Duck. The other 6 terms agree.
+    Why  : Same digits reordered: transposed digits. Names 91% similar: spelling error.
+    Next : Check the chat log for the agreed price. Amend the booking, or ask the broker to reissue. Check the
+            trader's name internally and update it. Add it to mappings.trader if it recurs.
+
+[2026-04-01 12:15:00] BREAK  severity=HIGH
+    trade 9009          ASML 100 @ 700 USD, fee 10, Donald Duck, Moonshot Capital, traded 2026-04-01 10:05:00
+    confirmation 9111   ASML 101 @ 700 USD, fee 10, Donald Duck, Moonshot Capital, traded 2026-04-01 10:06:00
+    What : volume differs: trade 100, confirmation 101. All other terms agree.
+    Why  : Only 1 apart: typing error.
+    Next : Check the chat log for the agreed size and amend the wrong side. Position is wrong until fixed.
+
+[2026-04-01 12:20:00] BREAK  severity=LOW
+    trade 9010          NVIDIA 10 @ 120 USD, fee 0, Donald Duck, Moonshot Capital, traded 2026-04-01 10:10:00
+    confirmation 9112   NVDA 10 @ 120 USD, fee 0, Donald Duck, Moonshot Capital, traded 2026-04-01 10:11:00
+    What : instrument differs: trade NVIDIA, confirmation NVDA. All other terms agree.
+    Why  : NVIDIA and NVDA: same product, ticker versus name.
+    Next : Confirm, then add 'NVDA: NVIDIA' to mappings.instrument so it matches next time.
+
+[2026-04-01 12:25:00] BREAK  severity=MEDIUM
+    trade 9011          META 10 @ 600 USD, fee 5, Donald Duck, Lazy Panda Securities, traded 2026-04-01 10:15:00
+    confirmation 9113   META 10 @ 600 USD, fee 5, Donald Duck, Lazy Panda Securities, traded 2026-04-02 10:16:00
+    What : trade date differs: trade 2026-04-01, confirmation 2026-04-02. All other terms agree.
+    Why  : Confirmation 9113 traded 2026-04-02 10:16:00, after it was received (2026-04-01 10:40:00):
+            impossible. Broker date typo likely. Time of day is 1 min from the other side.
+    Next : Ask Lazy Panda Securities to reissue with trade date 2026-04-01.
+
+[2026-04-01 12:30:00] QUARANTINED  severity=HIGH  internal feed, row 22
+    What : Row 22 of the internal feed rejected: price must be positive: -5.
+    Why  : Cannot be reconciled until fixed.
+    Next : Quarantined. Ask the data owner to correct and resend.
+
+[2026-04-01 12:40:00] QUARANTINED  severity=HIGH
+    trade 9000          NFLX 10 @ 500 USD, fee 5, Elsa Snow, Moonshot Capital, traded 2026-04-01 07:59:00
+    What : trade 9000 arrived again, changed (row 23): volume: 10 -> 99.
+    Why  : Likely an amendment or system error. Not applied.
+    Next : Quarantined. Ask the data owner which version is valid.
+
+[2026-04-01 12:40:00] UNCONFIRMED  severity=HIGH
+    trade 9014          APPLE 7 @ 190 USD, fee 2, Elsa Snow, Moonshot Capital, traded 2026-04-01 10:45:00
+    What : No confirmation 2h after booking, and none within 2 differences.
+    Why  : Moonshot Capital has not sent it, wrong broker booked, or trade not done.
+    Next : Chase Moonshot Capital and ask Elsa Snow if the trade was done.
+
+[2026-04-01 12:47:00] UNBOOKED  severity=HIGH
+    confirmation 9116   TESLA 5 @ 250 USD, fee 1, Elsa Snow, Lazy Panda Securities, traded 2026-04-01 10:26:00
+    identical to:
+    confirmation 9114   TESLA 5 @ 250 USD, fee 1, Elsa Snow, Lazy Panda Securities, traded 2026-04-01 10:26:00
+    What : No booking 2h after the confirmation arrived. Identical confirmation confirmation 9114 (matched
+            with trade 9012) is already matched.
+    Why  : Broker resend, or a second trade left unbooked: the data cannot tell. Same trade time, received
+            close together: leans resend. Stays HIGH: a missing booking means a wrong position.
+    Next : Ask Elsa Snow how many trades were done. If two, book the second. If one, ask Lazy Panda Securities
+            to cancel confirmation 9116.
+
+[2026-04-01 12:50:00] UNCONFIRMED  severity=HIGH
+    trade 9015          APPLE 7 @ 191 USD, fee 2, Elsa Snow, Moonshot Capital, traded 2026-04-01 13:45:00
+    What : No confirmation 2h after booking, and none within 2 differences.
+    Why  : Moonshot Capital has not sent it, wrong broker booked, or trade not done.
+    Next : Chase Moonshot Capital and ask Elsa Snow if the trade was done.
+
+[2026-04-01 13:00:00] PROCESSED trade 9005, matched with confirmation 9107  (resolved: trade 9005 was BREAK; the confirmation arrived 1h40m after the 2h deadline)
+
+[2026-04-01 13:00:00] UNBOOKED  severity=HIGH
+    confirmation 9106   MSFT 10 @ 50 USD, fee 6, Peter Pan, Big Dreams Brokers, traded 2026-04-01 09:16:00
+    What : No booking 2h after the confirmation arrived.
+    Why  : Peter Pan may have forgotten it, or booked it elsewhere.
+    Next : Contact Peter Pan now: position may be wrong. Book it, or link it with force-match.
+
+[2026-04-01 13:00:00] UNCONFIRMED  severity=HIGH
+    trade 9016          MSFT 9 @ 300 USD, fee 3, Elsa Snow, Moonshot Capital, traded 2026-04-01 10:50:00
+    What : No confirmation 2h after booking, and none within 2 differences.
+    Why  : Moonshot Capital has not sent it, wrong broker booked, or trade not done.
+    Next : Chase Moonshot Capital and ask Elsa Snow if the trade was done.
+
+[2026-04-01 14:05:00] PROCESSED trade 9017, matched with confirmation 9118
+[2026-04-01 16:01:00] POSSIBLE_DUPLICATE  severity=HIGH
+    trade 9018          ORCL 4 @ 150 USD, fee 2, Peter Pan, Big Dreams Brokers, traded 2026-04-01 13:55:00
+    identical to:
+    trade 9017          ORCL 4 @ 150 USD, fee 2, Peter Pan, Big Dreams Brokers, traded 2026-04-01 13:55:00
+    What : No confirmation. Identical to trade 9017, matched with confirmation 9118: traded in the same
+            minute, booked 1 min apart.
+    Why  : Same terms, almost the same time: likely booked twice.
+    Next : Ask Peter Pan to confirm, then cancel the duplicate.
+
+--------------------------------------------------------------------------------------------------------------
+END OF DAY 2026-04-01  as of 2026-04-02 00:00:00
+  trades        :  20 seen  |  PROCESSED 5  BREAK 10  UNCONFIRMED 4  POSSIBLE_DUPLICATE 1
+  confirmations :  18 seen  |  PROCESSED 5  BREAK 11  UNBOOKED 2
+  Open records: 28  (quarantined rows: 1)
+    HIGH   UNCONFIRMED         trade 8999           open  40h00m   no confirmation from Moonshot Capital after 2h
+    HIGH   UNBOOKED            confirmation 9106    open  14h30m   no booking by Peter Pan after 2h
+    HIGH   BREAK               trade 9006           open  14h00m   currency EUR vs USD
+    HIGH   BREAK               trade 9007           open  13h55m   price 17.15 vs 171.5
+    HIGH   BREAK               trade 9008           open  13h50m   price 12.45 vs 12.54; trader Donald Duck vs Donlad Duck
+    HIGH   BREAK               confirmation 9108    open  13h45m   currency EUR vs USD
+    HIGH   BREAK               trade 9009           open  13h45m   volume 100 vs 101
+    HIGH   BREAK               confirmation 9109    open  13h40m   price 17.15 vs 171.5
+    HIGH   BREAK               confirmation 9110    open  13h35m   price 12.45 vs 12.54; trader Donald Duck vs Donlad Duck
+    HIGH   BREAK               confirmation 9111    open  13h30m   volume 100 vs 101
+    HIGH   UNCONFIRMED         trade 9014           open  13h20m   no confirmation from Moonshot Capital after 2h
+    HIGH   UNBOOKED            confirmation 9116    open  13h13m   no booking by Elsa Snow after 2h; identical to confirmation 9114 (resend or second trade?)
+    HIGH   UNCONFIRMED         trade 9015           open  13h10m   no confirmation from Moonshot Capital after 2h
+    HIGH   UNCONFIRMED         trade 9016           open  13h00m   no confirmation from Moonshot Capital after 2h
+    HIGH   POSSIBLE_DUPLICATE  trade 9018           open   9h59m   identical to trade 9017, traded in the same minute
+    MEDIUM BREAK               trade 9001           open  15h00m   aggregation: 2 records add up to confirmation 9101
+    MEDIUM BREAK               trade 9002           open  14h59m   aggregation: 2 records add up to confirmation 9101
+    MEDIUM BREAK               trade 9003           open  14h55m   aggregation: 2 records add up to trade 9003
+    MEDIUM BREAK               confirmation 9101    open  14h50m   aggregation: 2 records add up to confirmation 9101
+    MEDIUM BREAK               trade 9004           open  14h50m   2 possible counterparts, none picked
+    MEDIUM BREAK               confirmation 9102    open  14h45m   aggregation: 2 records add up to trade 9003
+    MEDIUM BREAK               confirmation 9103    open  14h44m   aggregation: 2 records add up to trade 9003
+    MEDIUM BREAK               confirmation 9104    open  14h40m   1 possible counterpart, another record also fits, none picked
+    MEDIUM BREAK               confirmation 9105    open  14h39m   1 possible counterpart, another record also fits, none picked
+    MEDIUM BREAK               trade 9011           open  13h35m   trade date 2026-04-01 vs 2026-04-02
+    MEDIUM BREAK               confirmation 9113    open  13h20m   trade date 2026-04-01 vs 2026-04-02
+    LOW    BREAK               trade 9010           open  13h40m   instrument NVIDIA vs NVDA
+    LOW    BREAK               confirmation 9112    open  13h25m   instrument NVIDIA vs NVDA
+--------------------------------------------------------------------------------------------------------------
+
+[2026-04-02 11:00:00] UNBOOKED  severity=HIGH
+    confirmation 9117   GOOG 1 @ 10 USD, fee 1, Nobody, Ghost Brokers, traded 2026-04-02 08:00:00
+    What : No booking 2h after the confirmation arrived.
+    Why  : Nobody may have forgotten it, or booked it elsewhere.
+    Next : Contact Nobody now: position may be wrong. Book it, or link it with force-match.
+
+--------------------------------------------------------------------------------------------------------------
+END OF DAY 2026-04-02  (end of data)  as of 2026-04-02 11:00:00
+  trades        :  20 seen  |  PROCESSED 5  BREAK 10  UNCONFIRMED 4  POSSIBLE_DUPLICATE 1
+  confirmations :  19 seen  |  PROCESSED 5  BREAK 11  UNBOOKED 3
+  Open records: 29  (quarantined rows: 1)
+    HIGH   UNCONFIRMED         trade 8999           open  51h00m   no confirmation from Moonshot Capital after 2h
+    HIGH   UNBOOKED            confirmation 9106    open  25h30m   no booking by Peter Pan after 2h
+    HIGH   BREAK               trade 9006           open  25h00m   currency EUR vs USD
+    HIGH   BREAK               trade 9007           open  24h55m   price 17.15 vs 171.5
+    HIGH   BREAK               trade 9008           open  24h50m   price 12.45 vs 12.54; trader Donald Duck vs Donlad Duck
+    HIGH   BREAK               confirmation 9108    open  24h45m   currency EUR vs USD
+    HIGH   BREAK               trade 9009           open  24h45m   volume 100 vs 101
+    HIGH   BREAK               confirmation 9109    open  24h40m   price 17.15 vs 171.5
+    HIGH   BREAK               confirmation 9110    open  24h35m   price 12.45 vs 12.54; trader Donald Duck vs Donlad Duck
+    HIGH   BREAK               confirmation 9111    open  24h30m   volume 100 vs 101
+    HIGH   UNCONFIRMED         trade 9014           open  24h20m   no confirmation from Moonshot Capital after 2h
+    HIGH   UNBOOKED            confirmation 9116    open  24h13m   no booking by Elsa Snow after 2h; identical to confirmation 9114 (resend or second trade?)
+    HIGH   UNCONFIRMED         trade 9015           open  24h10m   no confirmation from Moonshot Capital after 2h
+    HIGH   UNCONFIRMED         trade 9016           open  24h00m   no confirmation from Moonshot Capital after 2h
+    HIGH   POSSIBLE_DUPLICATE  trade 9018           open  20h59m   identical to trade 9017, traded in the same minute
+    HIGH   UNBOOKED            confirmation 9117    open   2h00m   no booking by Nobody after 2h
+    MEDIUM BREAK               trade 9001           open  26h00m   aggregation: 2 records add up to confirmation 9101
+    MEDIUM BREAK               trade 9002           open  25h59m   aggregation: 2 records add up to confirmation 9101
+    MEDIUM BREAK               trade 9003           open  25h55m   aggregation: 2 records add up to trade 9003
+    MEDIUM BREAK               confirmation 9101    open  25h50m   aggregation: 2 records add up to confirmation 9101
+    MEDIUM BREAK               trade 9004           open  25h50m   2 possible counterparts, none picked
+    MEDIUM BREAK               confirmation 9102    open  25h45m   aggregation: 2 records add up to trade 9003
+    MEDIUM BREAK               confirmation 9103    open  25h44m   aggregation: 2 records add up to trade 9003
+    MEDIUM BREAK               confirmation 9104    open  25h40m   1 possible counterpart, another record also fits, none picked
+    MEDIUM BREAK               confirmation 9105    open  25h39m   1 possible counterpart, another record also fits, none picked
+    MEDIUM BREAK               trade 9011           open  24h35m   trade date 2026-04-01 vs 2026-04-02
+    MEDIUM BREAK               confirmation 9113    open  24h20m   trade date 2026-04-01 vs 2026-04-02
+    LOW    BREAK               trade 9010           open  24h40m   instrument NVIDIA vs NVDA
+    LOW    BREAK               confirmation 9112    open  24h25m   instrument NVIDIA vs NVDA
+--------------------------------------------------------------------------------------------------------------
+
+[2026-04-02 11:00:00] PROCESSED trade 9001 and trade 9002 and confirmation 9101: accepted manually by yg (group)
+
+[2026-04-02 11:00:00] PROCESSED trade 9004, matched with confirmation 9104  (resolved: trade 9004 was BREAK; the confirmation arrived 23h50m after the 2h deadline; manual force-match by yg: chat; resolved: confirmation 9104 was BREAK; the booking arrived 23h40m after the 2h deadline; manual force-match by yg: chat)
+
+[2026-04-02 11:00:00] UNBOOKED  severity=HIGH
+    confirmation 9105   META 10 @ 100 USD, fee 7, Peter Pan, Big Dreams Brokers, traded 2026-04-01 09:06:00
+    What : No booking 2h after the confirmation arrived.
+    Why  : Peter Pan may have forgotten it, or booked it elsewhere.
+    Next : Contact Peter Pan now: position may be wrong. Book it, or link it with force-match.
+

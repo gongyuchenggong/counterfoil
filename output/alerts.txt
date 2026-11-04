@@ -1,0 +1,112 @@
+19 alerts. Slack gets urgent alerts and resolutions; email gets the end-of-day digest.
+
+[2026-03-02 13:09:00] HIGH  POSSIBLE_DUPLICATE trade 2688: identical to trade 3961, traded in the same minute
+    What: No confirmation. Identical to trade 3961, matched with confirmation 19012: traded in the same
+        minute, booked 1 min apart.
+    Why: Same terms, almost the same time: likely booked twice.
+    Next: Ask Donald Duck to confirm, then cancel the duplicate.
+
+[2026-03-02 16:12:00] HIGH  UNCONFIRMED trade 4078: no confirmation from Lazy Panda Securities after 2h
+    What: No confirmation 2h after booking, and none within 2 differences.
+    Why: Lazy Panda Securities has not sent it, wrong broker booked, or trade not done.
+    Next: Chase Lazy Panda Securities and ask Peter Pan if the trade was done.
+
+[2026-03-02 16:47:00] INFO  RESOLVED trade 4078
+    resolved: trade 4078 was UNCONFIRMED; the confirmation arrived 35 min after the 2h deadline
+
+[2026-03-03 00:00:00] INFO  End of day 2026-03-02: 1 open exception (1 HIGH)
+    HIGH POSSIBLE_DUPLICATE trade 2688: identical to trade 3961, traded in the same minute
+
+[2026-03-03 11:25:00] HIGH  UNBOOKED confirmation 45381: no booking by Simba King after 2h
+    What: No booking 2h after the confirmation arrived.
+    Why: Simba King may have forgotten it, or booked it elsewhere.
+    Next: Contact Simba King now: position may be wrong. Book it, or link it with force-match.
+
+[2026-03-03 11:45:00] INFO  RESOLVED confirmation 45381
+    resolved: confirmation 45381 was UNBOOKED; the booking arrived 20 min after the 2h deadline
+
+[2026-03-03 12:19:10] HIGH  UNCONFIRMED trade 6054: no confirmation from Big Dreams Brokers after 2h
+    What: No confirmation 2h after booking, and none within 2 differences.
+    Why: Big Dreams Brokers has not sent it, wrong broker booked, or trade not done.
+    Next: Chase Big Dreams Brokers and ask Mickey Mouse if the trade was done.
+
+[2026-03-04 00:00:00] INFO  End of day 2026-03-03: 2 open exceptions (2 HIGH)
+    HIGH POSSIBLE_DUPLICATE trade 2688: identical to trade 3961, traded in the same minute
+    HIGH UNCONFIRMED trade 6054: no confirmation from Big Dreams Brokers after 2h
+
+[2026-03-04 17:32:05] HIGH  UNBOOKED confirmation 69795: no booking by Elsa Snow after 2h
+    What: No booking 2h after the confirmation arrived.
+    Why: Elsa Snow may have forgotten it, or booked it elsewhere.
+    Next: Contact Elsa Snow now: position may be wrong. Book it, or link it with force-match.
+
+[2026-03-04 18:31:00] HIGH  BREAK trade 9974 / confirmation 97051: broker Big Dreams Brokers vs Golden Goose Trading
+    What: broker differs: trade Big Dreams Brokers, confirmation Golden Goose Trading. All other terms agree.
+    Why: Booked with Big Dreams Brokers, confirmed by Golden Goose Trading. Wrong broker probably selected.
+    Next: Ask Mickey Mouse which broker executed. Amend the booking, or contact Golden Goose Trading if the
+        trade is not theirs.
+
+[2026-03-05 00:00:00] INFO  End of day 2026-03-04: 5 open exceptions (4 HIGH, 1 MEDIUM)
+    HIGH POSSIBLE_DUPLICATE trade 2688: identical to trade 3961, traded in the same minute
+    HIGH UNCONFIRMED trade 6054: no confirmation from Big Dreams Brokers after 2h
+    HIGH UNBOOKED confirmation 69795: no booking by Elsa Snow after 2h
+    HIGH BREAK confirmation 97051: broker Big Dreams Brokers vs Golden Goose Trading
+    MEDIUM BREAK confirmation 72141: fee 10 vs 12.5
+
+[2026-03-06 00:00:00] INFO  End of day 2026-03-05: 7 open exceptions (4 HIGH, 1 MEDIUM, 2 LOW)
+    HIGH POSSIBLE_DUPLICATE trade 2688: identical to trade 3961, traded in the same minute
+    HIGH UNCONFIRMED trade 6054: no confirmation from Big Dreams Brokers after 2h
+    HIGH UNBOOKED confirmation 69795: no booking by Elsa Snow after 2h
+    HIGH BREAK confirmation 97051: broker Big Dreams Brokers vs Golden Goose Trading
+    MEDIUM BREAK confirmation 72141: fee 10 vs 12.5
+    LOW BREAK confirmation 18519: trader Donald Duck vs Donlad Duck
+    LOW BREAK confirmation 17952: instrument NVIDIA vs NVDA
+
+[2026-03-06 18:42:00] HIGH  UNCONFIRMED trade 8005: no confirmation from Moonshot Capital after 2h; identical to trade 9711, 39 min apart
+    What: No confirmation 2h after booking, and none within 2 differences. Identical to trade 9711, matched
+        with confirmation 85752: traded 39 min apart, booked 39 min apart.
+    Why: Same terms, 39 min apart: second real trade, or a duplicate booking.
+    Next: Ask Mickey Mouse how many were done. If two, chase Moonshot Capital; if one, cancel the duplicate.
+
+[2026-03-07 00:00:00] INFO  End of day 2026-03-06: 9 open exceptions (5 HIGH, 2 MEDIUM, 2 LOW)
+    HIGH POSSIBLE_DUPLICATE trade 2688: identical to trade 3961, traded in the same minute
+    HIGH UNCONFIRMED trade 6054: no confirmation from Big Dreams Brokers after 2h
+    HIGH UNBOOKED confirmation 69795: no booking by Elsa Snow after 2h
+    HIGH BREAK confirmation 97051: broker Big Dreams Brokers vs Golden Goose Trading
+    HIGH UNCONFIRMED trade 8005: no confirmation from Moonshot Capital after 2h; identical to trade 9711, 39
+        min apart
+    MEDIUM BREAK confirmation 72141: fee 10 vs 12.5
+    MEDIUM BREAK confirmation 50580: trade date 2026-03-06 vs 2026-03-07
+    LOW BREAK confirmation 18519: trader Donald Duck vs Donlad Duck
+    LOW BREAK confirmation 17952: instrument NVIDIA vs NVDA
+
+[2026-03-07 12:26:00] HIGH  BREAK trade 6146 / confirmation 99291: currency EUR vs USD
+    What: currency differs: trade EUR, confirmation USD. All other terms agree.
+    Why: Booked in EUR, confirmed in USD: possibly a default currency left unchanged.
+    Next: Check the agreed currency with Peter Pan and Big Dreams Brokers, then amend the wrong side.
+
+[2026-03-07 14:21:00] HIGH  BREAK trade 8628 / confirmation 68411: volume 100 vs 101
+    What: volume differs: trade 100, confirmation 101. All other terms agree.
+    Why: Only 1 apart: typing error.
+    Next: Check the chat log for the agreed size and amend the wrong side. Position is wrong until fixed.
+
+[2026-03-07 20:12:00] HIGH  UNCONFIRMED trade 6924: no confirmation from Moonshot Capital after 2h
+    What: No confirmation 2h after booking, and none within 2 differences.
+    Why: Moonshot Capital has not sent it, wrong broker booked, or trade not done.
+    Next: Chase Moonshot Capital and ask Mickey Mouse if the trade was done.
+
+[2026-03-07 21:17:00] INFO  RESOLVED trade 6924
+    resolved: trade 6924 was UNCONFIRMED; the confirmation arrived 1h05m after the 2h deadline
+
+[2026-03-07 23:54:08] INFO  End of day 2026-03-07: 11 open exceptions (7 HIGH, 2 MEDIUM, 2 LOW)
+    HIGH POSSIBLE_DUPLICATE trade 2688: identical to trade 3961, traded in the same minute
+    HIGH UNCONFIRMED trade 6054: no confirmation from Big Dreams Brokers after 2h
+    HIGH UNBOOKED confirmation 69795: no booking by Elsa Snow after 2h
+    HIGH BREAK confirmation 97051: broker Big Dreams Brokers vs Golden Goose Trading
+    HIGH UNCONFIRMED trade 8005: no confirmation from Moonshot Capital after 2h; identical to trade 9711, 39
+        min apart
+    HIGH BREAK confirmation 99291: currency EUR vs USD
+    HIGH BREAK confirmation 68411: volume 100 vs 101
+    MEDIUM BREAK confirmation 72141: fee 10 vs 12.5
+    MEDIUM BREAK confirmation 50580: trade date 2026-03-06 vs 2026-03-07
+    LOW BREAK confirmation 18519: trader Donald Duck vs Donlad Duck
+    LOW BREAK confirmation 17952: instrument NVIDIA vs NVDA

@@ -1,0 +1,53 @@
+# Broker trades reconciliation: rules and reference data.
+# Rules, mappings and reference data feed the rule_version hash stamped on each status event,
+# so an audit can always tell which rules produced a given status.
+
+rules:
+  # Every record must get a definitive status within this many minutes
+  # after it becomes visible (inserted_at).
+  status_deadline_minutes: 120
+
+  # Partial (1:1) matching runs only when a record's deadline fires.
+  partial_match:
+    max_mismatches: 2        # out of 8 dimensions: 7 fields + trade date
+    date_window_days: 1      # candidates may sit one trade date apart
+
+  # Optional rule: several records on one side add up to one record on the other.
+  aggregation:
+    enabled: true
+    max_group_size: 5
+    max_candidates: 12       # caps the combinations searched per record
+
+  # Absolute tolerances for numeric fields. 0 means exact, as the assignment requires.
+  tolerances:
+    price: 0
+    volume: 0
+    fee: 0
+
+  duplicate_window_minutes: 5        # identical trades this close: POSSIBLE_DUPLICATE; further apart: UNCONFIRMED
+  clock_skew_tolerance_minutes: 5    # created_at after inserted_at: up to this a notice, beyond it the date is suspect
+  trader_typo_similarity: 0.8        # name similarity at or above this reads as a spelling error
+
+# Mapping tables maintained by Operations. Applied before matching, so a confirmed
+# alias matches automatically and the output says it was matched via a mapping.
+# They start empty on purpose: nothing is auto-corrected until a person confirms it.
+mappings:
+  instrument: {}      # e.g. NVDA: NVIDIA
+  trader: {}          # e.g. Donlad Duck: Donald Duck
+  broker: {}
+
+# Reference data: hints explain breaks and never match; a currency outside the list rejects the row.
+reference:
+  instrument_hints:   # ticker -> name
+    AAPL: APPLE
+    AMZN: AMAZON
+    MSFT: MICROSOFT
+    NFLX: NETFLIX
+    NVDA: NVIDIA
+    TSLA: TESLA
+  currencies: [USD, EUR, GBP, CHF, JPY, CAD, AUD, NZD, SEK, NOK, DKK, HKD, SGD,
+               CNY, CNH, KRW, INR, ZAR, MXN, BRL, PLN, CZK, HUF, TRY, ILS]
+
+# Who hears what, and when. Not part of the rule version: it changes who is told, not what the status is.
+alerts:
+  immediate: [HIGH]   # sent at once, one per case; everything else waits for the end-of-day digest

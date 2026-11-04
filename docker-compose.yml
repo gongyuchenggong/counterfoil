@@ -1,0 +1,22 @@
+# Local PostgreSQL for --store postgres and live mode.
+#   docker compose up -d
+#   export RECON_DSN="host=localhost port=5432 user=recon password=recon dbname=recon"
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: recon
+      POSTGRES_PASSWORD: recon
+      POSTGRES_DB: recon
+    ports:
+      - "5432:5432"
+    volumes:
+      - recon-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recon -d recon"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  recon-pgdata:

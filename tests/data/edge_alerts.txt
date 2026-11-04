@@ -1,0 +1,128 @@
+18 alerts. Slack gets urgent alerts and resolutions; email gets the end-of-day digest.
+
+[2026-03-31 10:00:00] HIGH  UNCONFIRMED trade 8999: no confirmation from Moonshot Capital after 2h
+    What: No confirmation 2h after booking, and none within 2 differences.
+    Why: Moonshot Capital has not sent it, wrong broker booked, or trade not done.
+    Next: Chase Moonshot Capital and ask Elsa Snow if the trade was done.
+
+[2026-04-01 00:00:00] INFO  End of day 2026-03-31: 1 open exception (1 HIGH)
+    HIGH UNCONFIRMED trade 8999: no confirmation from Moonshot Capital after 2h
+
+[2026-04-01 12:00:00] HIGH  BREAK trade 9006 / confirmation 9108: currency EUR vs USD
+    What: currency differs: trade EUR, confirmation USD. All other terms agree.
+    Why: Booked in EUR, confirmed in USD: possibly a default currency left unchanged.
+    Next: Check the agreed currency with Elsa Snow and Moonshot Capital, then amend the wrong side.
+
+[2026-04-01 12:05:00] HIGH  BREAK trade 9007 / confirmation 9109: price 17.15 vs 171.5
+    What: price differs: trade 17.15, confirmation 171.5. All other terms agree.
+    Why: Exactly 10x apart: decimal shift.
+    Next: Check the chat log for the agreed price. Amend the booking, or ask the broker to reissue.
+
+[2026-04-01 12:10:00] HIGH  BREAK trade 9008 / confirmation 9110: price 12.45 vs 12.54; trader Donald Duck vs Donlad Duck
+    What: price differs: trade 12.45, confirmation 12.54; trader differs: trade Donald Duck, confirmation
+        Donlad Duck. The other 6 terms agree.
+    Why: Same digits reordered: transposed digits. Names 91% similar: spelling error.
+    Next: Check the chat log for the agreed price. Amend the booking, or ask the broker to reissue. Check the
+        trader's name internally and update it. Add it to mappings.trader if it recurs.
+
+[2026-04-01 12:15:00] HIGH  BREAK trade 9009 / confirmation 9111: volume 100 vs 101
+    What: volume differs: trade 100, confirmation 101. All other terms agree.
+    Why: Only 1 apart: typing error.
+    Next: Check the chat log for the agreed size and amend the wrong side. Position is wrong until fixed.
+
+[2026-04-01 12:30:00] HIGH  QUARANTINED internal feed, row 22
+    What: Row 22 of the internal feed rejected: price must be positive: -5.
+    Why: Cannot be reconciled until fixed.
+    Next: Quarantined. Ask the data owner to correct and resend.
+
+[2026-04-01 12:40:00] HIGH  QUARANTINED trade 9000
+    What: trade 9000 arrived again, changed (row 23): volume: 10 -> 99.
+    Why: Likely an amendment or system error. Not applied.
+    Next: Quarantined. Ask the data owner which version is valid.
+
+[2026-04-01 12:40:00] HIGH  UNCONFIRMED trade 9014: no confirmation from Moonshot Capital after 2h
+    What: No confirmation 2h after booking, and none within 2 differences.
+    Why: Moonshot Capital has not sent it, wrong broker booked, or trade not done.
+    Next: Chase Moonshot Capital and ask Elsa Snow if the trade was done.
+
+[2026-04-01 12:47:00] HIGH  UNBOOKED confirmation 9116: no booking by Elsa Snow after 2h; identical to confirmation 9114 (resend or second trade?)
+    What: No booking 2h after the confirmation arrived. Identical confirmation confirmation 9114 (matched with
+        trade 9012) is already matched.
+    Why: Broker resend, or a second trade left unbooked: the data cannot tell. Same trade time, received close
+        together: leans resend. Stays HIGH: a missing booking means a wrong position.
+    Next: Ask Elsa Snow how many trades were done. If two, book the second. If one, ask Lazy Panda Securities
+        to cancel confirmation 9116.
+
+[2026-04-01 12:50:00] HIGH  UNCONFIRMED trade 9015: no confirmation from Moonshot Capital after 2h
+    What: No confirmation 2h after booking, and none within 2 differences.
+    Why: Moonshot Capital has not sent it, wrong broker booked, or trade not done.
+    Next: Chase Moonshot Capital and ask Elsa Snow if the trade was done.
+
+[2026-04-01 13:00:00] HIGH  UNBOOKED confirmation 9106: no booking by Peter Pan after 2h
+    What: No booking 2h after the confirmation arrived.
+    Why: Peter Pan may have forgotten it, or booked it elsewhere.
+    Next: Contact Peter Pan now: position may be wrong. Book it, or link it with force-match.
+
+[2026-04-01 13:00:00] HIGH  UNCONFIRMED trade 9016: no confirmation from Moonshot Capital after 2h
+    What: No confirmation 2h after booking, and none within 2 differences.
+    Why: Moonshot Capital has not sent it, wrong broker booked, or trade not done.
+    Next: Chase Moonshot Capital and ask Elsa Snow if the trade was done.
+
+[2026-04-01 16:01:00] HIGH  POSSIBLE_DUPLICATE trade 9018: identical to trade 9017, traded in the same minute
+    What: No confirmation. Identical to trade 9017, matched with confirmation 9118: traded in the same minute,
+        booked 1 min apart.
+    Why: Same terms, almost the same time: likely booked twice.
+    Next: Ask Peter Pan to confirm, then cancel the duplicate.
+
+[2026-04-02 00:00:00] INFO  End of day 2026-04-01: 18 open exceptions (11 HIGH, 6 MEDIUM, 1 LOW)
+    HIGH UNCONFIRMED trade 8999: no confirmation from Moonshot Capital after 2h
+    HIGH UNBOOKED confirmation 9106: no booking by Peter Pan after 2h
+    HIGH BREAK confirmation 9108: currency EUR vs USD
+    HIGH BREAK confirmation 9109: price 17.15 vs 171.5
+    HIGH BREAK confirmation 9110: price 12.45 vs 12.54; trader Donald Duck vs Donlad Duck
+    HIGH BREAK confirmation 9111: volume 100 vs 101
+    HIGH UNCONFIRMED trade 9014: no confirmation from Moonshot Capital after 2h
+    HIGH UNBOOKED confirmation 9116: no booking by Elsa Snow after 2h; identical to confirmation 9114 (resend
+        or second trade?)
+    HIGH UNCONFIRMED trade 9015: no confirmation from Moonshot Capital after 2h
+    HIGH UNCONFIRMED trade 9016: no confirmation from Moonshot Capital after 2h
+    HIGH POSSIBLE_DUPLICATE trade 9018: identical to trade 9017, traded in the same minute
+    MEDIUM BREAK confirmation 9101: aggregation: 2 records add up to confirmation 9101
+    MEDIUM BREAK confirmation 9103: aggregation: 2 records add up to trade 9003
+    MEDIUM BREAK trade 9004: 2 possible counterparts, none picked
+    MEDIUM BREAK confirmation 9104: 1 possible counterpart, another record also fits, none picked
+    MEDIUM BREAK confirmation 9105: 1 possible counterpart, another record also fits, none picked
+    MEDIUM BREAK confirmation 9113: trade date 2026-04-01 vs 2026-04-02
+    LOW BREAK confirmation 9112: instrument NVIDIA vs NVDA
+
+[2026-04-02 11:00:00] HIGH  UNBOOKED confirmation 9117: no booking by Nobody after 2h
+    What: No booking 2h after the confirmation arrived.
+    Why: Nobody may have forgotten it, or booked it elsewhere.
+    Next: Contact Nobody now: position may be wrong. Book it, or link it with force-match.
+
+[2026-04-02 11:00:00] INFO  End of day 2026-04-02: 19 open exceptions (12 HIGH, 6 MEDIUM, 1 LOW)
+    HIGH UNCONFIRMED trade 8999: no confirmation from Moonshot Capital after 2h
+    HIGH UNBOOKED confirmation 9106: no booking by Peter Pan after 2h
+    HIGH BREAK confirmation 9108: currency EUR vs USD
+    HIGH BREAK confirmation 9109: price 17.15 vs 171.5
+    HIGH BREAK confirmation 9110: price 12.45 vs 12.54; trader Donald Duck vs Donlad Duck
+    HIGH BREAK confirmation 9111: volume 100 vs 101
+    HIGH UNCONFIRMED trade 9014: no confirmation from Moonshot Capital after 2h
+    HIGH UNBOOKED confirmation 9116: no booking by Elsa Snow after 2h; identical to confirmation 9114 (resend
+        or second trade?)
+    HIGH UNCONFIRMED trade 9015: no confirmation from Moonshot Capital after 2h
+    HIGH UNCONFIRMED trade 9016: no confirmation from Moonshot Capital after 2h
+    HIGH POSSIBLE_DUPLICATE trade 9018: identical to trade 9017, traded in the same minute
+    HIGH UNBOOKED confirmation 9117: no booking by Nobody after 2h
+    MEDIUM BREAK confirmation 9101: aggregation: 2 records add up to confirmation 9101
+    MEDIUM BREAK confirmation 9103: aggregation: 2 records add up to trade 9003
+    MEDIUM BREAK trade 9004: 2 possible counterparts, none picked
+    MEDIUM BREAK confirmation 9104: 1 possible counterpart, another record also fits, none picked
+    MEDIUM BREAK confirmation 9105: 1 possible counterpart, another record also fits, none picked
+    MEDIUM BREAK confirmation 9113: trade date 2026-04-01 vs 2026-04-02
+    LOW BREAK confirmation 9112: instrument NVIDIA vs NVDA
+
+[2026-04-02 11:00:00] HIGH  UNBOOKED confirmation 9105: no booking by Peter Pan after 2h
+    What: No booking 2h after the confirmation arrived.
+    Why: Peter Pan may have forgotten it, or booked it elsewhere.
+    Next: Contact Peter Pan now: position may be wrong. Book it, or link it with force-match.
