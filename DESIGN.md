@@ -1,6 +1,6 @@
 # What Counterfoil does
 
-- Compares internal trades with broker confirmations, one record at a time, as if live.
+- Compares internal trades with broker confirmations, one record at a time, in arrival order.
 - Gives every record a status within 2 hours.
 - Tells Operations what is wrong, why, and what to do next.
 
@@ -12,35 +12,24 @@
 | `UNBOOKED` | Confirmed, no booking: the position may be wrong |
 | `POSSIBLE_DUPLICATE` | Identical to a booking already confirmed, traded within 5 minutes of it |
 
-**What the dashboard shows**
-
-- **Tiles:** match rate, open exceptions, deadline met, resolved late, rejected rows. Hover for detail.
-- **Main table:** open exceptions and matches. Filter, search, and open a row for what, why and next.
-- **Records to check:** bad or doubtful data, found separately from matching.
-- **Bottom:** status counts by side, and how long each broker takes to confirm.
-- **Header:** how it works, how to run it, and the text report to download.
-- **Read-only:** a snapshot of the latest run. Operations records decisions with the `accept`, `force-match` and `note` commands.
-
-## 1. Engine design
+## 1. Design
 
 ```mermaid
 flowchart LR
     accTitle: Engine design
-    csv["CSV replay"] --> loader["Loader: valid?"]
+    csv["CSV"] --> loader["Check each row"]
     pg[("PostgreSQL")] --> loader
     loader --> engine["ENGINE"]
-    ops["Ops decisions"] --> engine
-    engine --> log[("Event log, append-only")]
-    log --> reports["Text report, CSV, JSONL"]
+    ops["Operations decisions"] --> engine
+    engine --> log[("Event log, never overwritten:<br/>files or PostgreSQL")]
+    log --> reports["Text report, data files"]
     log --> dash["Dashboard"]
     log --> alerts["Alerts: Slack, email"]
-    log -. "restart: replay to the checkpoint" .-> engine
+    log -. "after a crash: rerun to the saved point" .-> engine
 ```
 
-- The engine hears only "a record arrived" and "time moved on": one engine for replay and live, and no look-ahead is possible.
-- The event log is the single source of truth: reports can always be rebuilt, identically.
-- Rules live in `config.yaml`, hashed into every event: an audit can tell which rules produced a status.
-- PostgreSQL, live mode, alerts and the dashboard are optional layers; the engine knows none of them.
+- **PostgreSQL in and out:** `run --store postgres --source postgres` reads trades and confirmations from database tables and saves every result back to the database. `live` does the same continuously as new rows arrive.
+
 
 ## 2. Logic
 
@@ -56,7 +45,7 @@ flowchart TD
     wait -- "exact match arrives" --> done
     wait -- deadline --> sum{{"Several add up to one?"}}
     sum -- yes --> agg["BREAK<br/>aggregation: N records add up to X"]:::brk
-    sum -- no --> near{{"1-2 terms differ, at most<br/>a day apart, each other's<br/>best candidate?"}}
+    sum -- no --> near{{"1-2 terms differ, at most<br/>a day apart, each other's<br/>closest match?"}}
     near -- yes --> diff["BREAK<br/>e.g. fee 10 vs 12.5"]:::brk
     near -- tie --> tie["BREAK<br/>N possible counterparts, none picked"]:::brk
     near -- no --> dup{{"Identical to a matched booking,<br/>traded within 5 minutes?"}}
@@ -72,7 +61,7 @@ flowchart TD
 
 ### Time
 
-- Only `inserted_at` drives the clock.
+- The clock follows `inserted_at`, the time a record arrives.
 - The engine sees one record at a time.
 
 ```mermaid
@@ -82,150 +71,104 @@ flowchart LR
     deadline -- "flagged, still matchable" --> later["Status can update later"]
 ```
 
-- The deadline fires before any record after 15:00; a record at exactly 15:00 goes first.
 
-### Why partial matching exists
-
-- It never counts as matched.
-- It turns two wrong alarms into one right one.
-
-| Partial matching | Operations is told | Result |
-| --- | --- | --- |
-| Without | Trade 2596: "chase the broker". Confirmation 72141: "call the trader now" | Wrong action, false HIGH |
-| With | 2596 / 72141: `BREAK`, fee 10 vs 12.5 | The exact field to fix |
-
-### Each difference is diagnosed, not just reported
+### Each difference is explained, not just reported
 
 | Difference | How it is read | Severity |
 | --- | --- | --- |
-| Price | Ratio of 10, 100, 1000: decimal shift. Same digits reordered: transposition | HIGH |
-| Volume | Off by a little: typo. Exact multiple: lots versus units | HIGH |
+| Price | Exactly 10, 100 or 1000 times: decimal point misplaced. Same digits reordered: typing error | HIGH |
+| Volume | Off by a little: typo. Exact multiple: lots mixed up with units | HIGH |
 | Currency | Wrong currency on one side: check with trader and broker | HIGH |
 | Broker | Wrong broker selected, or broker confirmed a trade that is not theirs | HIGH |
 | Fee | At most 0.01: rounding. One side zero: left out. Otherwise: wrong commission rate | MEDIUM |
-| Trade date | `created_at` after `inserted_at`: date typo. Otherwise late booking or time zone | MEDIUM |
+| Trade date | Trade time after arrival: date typo. Otherwise late booking or time zone | MEDIUM |
 | Trader | At least 80% similar: spelling (LOW). Otherwise a different person (MEDIUM) | LOW, MEDIUM |
 | Instrument | Ticker versus name: same product (LOW). Otherwise a different product (HIGH) | LOW, HIGH |
 
-### Severity is business consequence
+### How serious each one is
 
 - **HIGH:** affects position or cash, resolve today.
 - **MEDIUM:** affects fees or record accuracy, including several records that add up to one.
-- **LOW:** reference data only.
+- **LOW:** names only.
 - **INFO:** no action needed.
 
-## 3. Scenario overview
+## 3. Scenarios
 
 | Area | Scenario | What the engine does |
 | --- | --- | --- |
-| Matching | Exact match arrives after a break or tie | Exact match wins; the others involved are re-evaluated at once |
-| Matching | Booking identical to a matched one, more than 5 minutes apart | `UNCONFIRMED`, HIGH: second trade or duplicate, Operations decides |
-| Matching | Confirmation identical to a matched one | `UNBOOKED`, HIGH: resend or second trade, Operations decides |
-| Matching | `NVDA` versus `NVIDIA` | LOW `BREAK` until Operations adds an alias |
-| Matching | Small numeric difference | `BREAK`: tolerance is configurable, default 0 |
 | Matching | New data contradicts a manual decision | The decision stands; a notice is raised |
 | Input | Rules or inputs changed | Refused with a message, until `--fresh` |
-| Input | Invalid or absurd row | Quarantined with the reason; never dropped, never crashes the run |
-| Input | Bad file or config, misspelt setting | Clear error, no traceback |
-| Input | Row committed out of id order (live) | Each poll re-reads the last 5 minutes and skips rows already seen |
-| System | Power cut, crash | Replay; event ids are fixed and stored ids are skipped, so nothing counts twice |
-| System | Half-written last line | Cut off on load |
-| System | Events but no checkpoint (fresh clone) | Rebuilt: they cannot be traced to these rules and inputs |
-| System | Database connection lost (live) | Wait 1, 2, 4 ... 60 s, reconnect, rebuild, continue |
-| System | Second instance (PostgreSQL) | Refused by an advisory lock, released if the process dies |
-| System | Slack or email down | Reconciliation continues; retried at the next refresh |
+| Input | Invalid or absurd row | Set aside with the reason; never dropped, never stops the run |
+| System | Database connection lost (live) | Wait 1, 2, 4 ... 60 s, reconnect, catch up, continue |
+
 
 **How a restart recovers**
 
 ```mermaid
 flowchart LR
     accTitle: How a restart recovers
-    subgraph step["One step, one commit"]
+    subgraph step["One step at a time"]
         direction LR
-        input["Process input"] --> write["Write events"] --> move["Move checkpoint"]
+        input["Process a record"] --> write["Save the results"] --> move["Save the point reached"]
     end
-    move -- "restart: replay to checkpoint, write nothing, continue" --> input
+    move -- "after a crash: rerun to the saved point, save nothing twice, continue" --> input
 ```
 
 ## 4. Assumptions
 
 1. One time zone; the data carries none.
 2. Trade date is the date of `created_at`.
-3. No buy/sell field and all volumes positive, so direction is not reconciled.
-4. No amend or cancel field. Same id, same content: resend, ignored. Same id, new content: quarantined, never applied.
-5. `trade_id` and `confirmation_id` are unique per feed and unrelated to each other.
+3. No buy/sell field and all volumes positive, so buying and selling are not compared.
+4. No amend or cancel field. Same id, same content: resend, ignored. Same id, new content: set aside, never applied.
+5. `trade_id` and `confirmation_id` are unique per file and unrelated to each other.
 6. Trades, not positions or cash, are in scope: the data has neither.
 
 ## 5. Known limits and how to close them
 
-- File mode has no writer lock and can crash between saving a decision and its events. Neither applies in production: PostgreSQL has an advisory lock and saves a decision with its events in one transaction.
 
 | Limit | Potential fix | When it happens |
 | --- | --- | --- |
-| Restart replays the full history | Daily engine snapshot, replaying only what follows; a rule or code change means a full replay | Around 1 million records, when restart reaches about 2 minutes (measured on PostgreSQL: 4.6 s for 40,000, one laptop, synthetic data) |
+| A restart reruns all history | Save the engine's state daily and rerun only what follows; a rule or code change means rerunning everything | Around 1 million records, when restart reaches about 2 minutes (measured on PostgreSQL: 4.6 s for 40,000, one laptop, test data) |
 
-## 6. Telling Operations
+## 6. Notifications
 
 ```mermaid
 flowchart LR
     accTitle: How 109 events become 19 alerts
-    events["109 events"] --> urgent["One per case, HIGH at once: 10"] --> slack["Slack"]
+    events["109 events"] --> urgent["Urgent, one per HIGH case: 10"] --> slack["Slack"]
     events --> resolved["Resolved, stop chasing it: 3"] --> slack
-    events --> digest["Daily digest of what is open: 6"] --> email["Email"]
+    events --> digest["Daily summary of what is open: 6"] --> email["Email"]
 ```
 
-- 19 alerts in all.
-- Too many alerts get ignored, so the rest wait for the digest.
-- Alerts are derived from the event log and sent through a ledger of what went out (outbox pattern).
-- Sending from the engine would re-alert everyone on a rebuild.
-- A crash can repeat one alert, never lose one.
+- 109 is every status change and notice the engine recorded; 10 urgent alerts, 3 "resolved" follow-ups and 6 end-of-day summaries.
 
 ## 7. Production and extending
 
 ```mermaid
 flowchart LR
     accTitle: Production data flow
-    booking["Booking system"] -- "replica or CDC" --> a1["Adapter"]
-    broker["Broker email, SFTP, SWIFT, FIX"] --> a2["Adapter"]
-    a1 --> landing[("Landing tables: the contract")]
+    booking["Booking system"] -- "read-only copy" --> a1["Converter"]
+    broker["Broker email, file transfer, SWIFT, FIX"] --> a2["Converter"]
+    a1 --> landing[("Intake tables, one format")]
     a2 --> landing
     landing --> engine["Engine"] --> results["Results"]
 ```
 
-- `load-db` stands in for the adapters.
-- Landing tables are the contract: append-only, one row per delivery, stored as received, `inserted_at` set by the database.
-- Everything downstream stays the same.
 
 | To add | Change only |
 | --- | --- |
-| A data source | One adapter writing to the landing tables |
-| A threshold | One field in `config.py`, one value in `config.yaml` |
-| An alert channel | One send function and one entry in `alerts.channels_from_env` |
+| A data source | One converter writing to the intake tables |
+| A limit | One field in `config.py`, one value in `config.yaml` |
+| A new way to send alerts | One send function and one entry in `alerts.channels_from_env` |
 
 | Next, in order | Why |
 | --- | --- |
-| Amendments and cancellations | Real systems send them; quarantining them does not scale. Add a version or action column |
-| Buy/sell, then position and cash reconciliation | The same engine shape; this is where the money risk sits |
-| End-of-day rollover and snapshots | Replay only from the last snapshot, not all history |
-| Reference data | Feed the mapping tables from the security master and broker static data |
-| Four-eyes on HIGH accepts; escalation when alerts are ignored | A manual accept changes the books |
-| Monitoring | Heartbeat, ingestion lag, exception age |
-| Security | Secrets manager, TLS, least-privilege roles: adapters insert only, Operations submits requests only |
+| Connect to the firm's databases automatically | Today PostgreSQL needs command options, and `load-db` to fill the engine's own tables. Read the firm's tables and save results with no manual step |
+| Amendments and cancellations | Real systems send them; setting them aside does not scale. Add a version or action column |
+| Buy/sell, then position and cash checks | The same design; this is where the money risk sits |
+| Daily saved state | Rerun only from the last save, not all history |
+| Official name lists | Fill the name tables from the firm's instrument and broker lists |
+| A second person approves HIGH accepts; ignored alerts go to a manager | A manual accept changes the books |
+| Monitoring | Is it running, how far behind is it, how old are open cases |
+| Security | Passwords in a vault, encrypted connections, minimum access: converters only add data, Operations only submits requests |
 
-## 8. Tests and stack
-
-| Check | Proves |
-| --- | --- |
-| Expected results for all 98 records | Status, counterpart and first-status time |
-| Output before a cut-off ignores later data | No look-ahead, at six cut-offs |
-| Saved reports on edge-case feeds | Rare paths stay exactly as they are |
-| About 2,700 random records | Nothing stays pending, every deadline met, nothing matched twice |
-| Crashes at several points, torn lines, a killed connection | Results never change |
-| Test strength: 70 temporary faults added to a copy of the matching, loading, report and alert code, one at a time | The tests noticed 80%; most misses affect only wording, display or extreme limits. The faults were never in the engine |
-
-### Stack
-
-- Python 3.14 is the target; tests also pass on 3.11 to 3.15.
-- `uv.lock` pins every version on every platform.
-- The dashboard is one self-contained file with no framework or outside requests.
-- Text from the feeds is escaped.

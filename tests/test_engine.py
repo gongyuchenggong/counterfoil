@@ -1,10 +1,12 @@
 """The engine, one scenario at a time, including cases the sample data never reaches."""
 
+import ast
 import random
 from datetime import datetime, timedelta
 
 import pytest
 from conftest import (
+    ROOT,
     at,
     confirmation,
     confirmation_events,
@@ -450,3 +452,13 @@ def test_decisions_that_cannot_apply_are_refused():
         eng.apply_manual({"action": "accept", "side": INTERNAL, "record_id": 1})
     with pytest.raises(ManualActionError, match="unknown action"):
         eng.apply_manual({"action": "delete"})
+
+
+def test_the_core_touches_no_file_database_or_network():
+    """What the architecture diagram promises: the core only computes, so replay and live share it."""
+    outside = {"csv", "jinja2", "json", "markdown", "os", "pathlib", "psycopg", "smtplib", "socket", "urllib", "yaml"}
+    for name in ("engine", "matcher", "diagnostics"):
+        tree = ast.parse((ROOT / "recon" / f"{name}.py").read_text())
+        imported = {a.name.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
+        imported |= {n.module.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and not n.level}
+        assert not imported & outside, name

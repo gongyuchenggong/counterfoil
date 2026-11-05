@@ -57,7 +57,7 @@ def test_dashboard_is_self_contained_and_carries_the_docs(cfg, items):
     )  # no two key figures share a symbol
     assert "Median lag (min)" not in page  # the chart and its tooltip carry those figures
     assert "2 open exceptions" in page
-    assert 'id="docs"' in page and "Why partial matching exists" in page
+    assert 'id="docs"' in page
     assert page.count('class="diagram scroll"') == 6 and "language-mermaid" not in page
     assert 'data-icon="sun"' in page and 'data-icon="moon"' in page
     for figure in ("80%", "40 of 50 trades fully confirmed", "7 HIGH · 2 MEDIUM · 2 LOW", "98 / 98"):
