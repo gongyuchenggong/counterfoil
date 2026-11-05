@@ -1337,36 +1337,10 @@ dialog.panel:focus-visible { outline:none; }
 <pre tabindex="0"><code class="language-bash">uv run python -m recon run
 </code></pre>
 <ul>
-<li>Run the tests. Database tests need the setting <code>RECON_TEST_ADMIN_DSN</code>, otherwise they skip:</li>
+<li>Run the tests:</li>
 </ul>
 <pre tabindex="0"><code class="language-bash">uv run python -m pytest -q
 </code></pre>
-<div class="scroll" tabindex="0"><table>
-<thead>
-<tr>
-<th>Output in <code>output/</code></th>
-<th>Read it for</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>recon_output.txt</code></td>
-<td>Summary first, then every status in time order</td>
-</tr>
-<tr>
-<td><code>final_status.csv</code>, <code>status_events.jsonl</code></td>
-<td>Results for other programs, and the full history</td>
-</tr>
-<tr>
-<td><code>dashboard.html</code></td>
-<td>Open exceptions and matches with filters, broker timeliness, day and night mode, these instructions, the design and the text report</td>
-</tr>
-<tr>
-<td><code>alerts.txt</code></td>
-<td>What Operations would receive</td>
-</tr>
-</tbody>
-</table></div>
 <h2 id="code-map">Code map</h2>
 <div class="scroll" tabindex="0"><table>
 <thead>

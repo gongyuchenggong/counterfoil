@@ -37,18 +37,12 @@ uv sync --locked --all-extras
 uv run python -m recon run
 ```
 
-- Run the tests. Database tests need the setting `RECON_TEST_ADMIN_DSN`, otherwise they skip:
+- Run the tests:
 
 ```bash
 uv run python -m pytest -q
 ```
 
-| Output in `output/` | Read it for |
-| --- | --- |
-| `recon_output.txt` | Summary first, then every status in time order |
-| `final_status.csv`, `status_events.jsonl` | Results for other programs, and the full history |
-| `dashboard.html` | Open exceptions and matches with filters, broker timeliness, day and night mode, these instructions, the design and the text report |
-| `alerts.txt` | What Operations would receive |
 
 ## Code map
 
