@@ -123,7 +123,7 @@ flowchart LR
 5. `trade_id` and `confirmation_id` are unique per file and unrelated to each other.
 6. Trades, not positions or cash, are in scope: the data has neither.
 
-## 5. Known limits and how to close them
+## 5. limit
 
 
 | Limit | Potential fix | When it happens |
